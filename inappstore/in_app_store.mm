@@ -33,6 +33,14 @@
 #import <Foundation/Foundation.h>
 #import <StoreKit/StoreKit.h>
 
+#if VERSION_MAJOR == 4
+typedef PackedStringArray GodotStringArray;
+typedef PackedFloat32Array GodotFloatArray;
+#else
+typedef PoolStringArray GodotStringArray;
+typedef PoolRealArray GodotFloatArray;
+#endif
+
 InAppStore *InAppStore::instance = NULL;
 
 @interface SKProduct (LocalizedPrice)
@@ -146,12 +154,12 @@ InAppStore *InAppStore::instance = NULL;
 	Dictionary ret;
 	ret["type"] = "product_info";
 	ret["result"] = "ok";
-	PackedStringArray titles;
-	PackedStringArray descriptions;
-	PackedFloat32Array prices;
-	PackedStringArray ids;
-	PackedStringArray localized_prices;
-	PackedStringArray currency_codes;
+	GodotStringArray titles;
+	GodotStringArray descriptions;
+	GodotFloatArray prices;
+	GodotStringArray ids;
+	GodotStringArray localized_prices;
+	GodotStringArray currency_codes;
 
 	for (NSUInteger i = 0; i < [products count]; i++) {
 		SKProduct *product = [products objectAtIndex:i];
@@ -174,7 +182,7 @@ InAppStore *InAppStore::instance = NULL;
 	ret["localized_prices"] = localized_prices;
 	ret["currency_codes"] = currency_codes;
 
-	PackedStringArray invalid_ids;
+	GodotStringArray invalid_ids;
 
 	for (NSString *ipid in response.invalidProductIdentifiers) {
 		invalid_ids.push_back(String::utf8([ipid UTF8String]));
@@ -228,8 +236,10 @@ InAppStore *InAppStore::instance = NULL;
 }
 
 - (void)paymentQueue:(SKPaymentQueue *)queue updatedTransactions:(NSArray *)transactions {
+
 	printf("transactions updated!\n");
 	for (SKPaymentTransaction *transaction in transactions) {
+
 		switch (transaction.transactionState) {
 			case SKPaymentTransactionStatePurchased: {
 				printf("status purchased!\n");
@@ -316,7 +326,7 @@ void InAppStore::_bind_methods() {
 Error InAppStore::request_product_info(Dictionary p_params) {
 	ERR_FAIL_COND_V(!p_params.has("product_ids"), ERR_INVALID_PARAMETER);
 
-	PackedStringArray pids = p_params["product_ids"];
+	GodotStringArray pids = p_params["product_ids"];
 	printf("************ request product info! %i\n", pids.size());
 
 	NSMutableArray *array = [[NSMutableArray alloc] initWithCapacity:pids.size()];
@@ -324,7 +334,7 @@ Error InAppStore::request_product_info(Dictionary p_params) {
 		printf("******** adding %s to product list\n", pids[i].utf8().get_data());
 		NSString *pid = [[NSString alloc] initWithUTF8String:pids[i].utf8().get_data()];
 		[array addObject:pid];
-	};
+	}
 
 	NSSet *products = [[NSSet alloc] initWithArray:array];
 
@@ -347,10 +357,9 @@ Error InAppStore::purchase(Dictionary p_params) {
 	}
 
 	printf("purchasing!\n");
-	Dictionary params = p_params;
-	ERR_FAIL_COND_V(!params.has("product_id"), ERR_INVALID_PARAMETER);
+	ERR_FAIL_COND_V(!p_params.has("product_id"), ERR_INVALID_PARAMETER);
 
-	NSString *pid = [[NSString alloc] initWithUTF8String:String(params["product_id"]).utf8().get_data()];
+	NSString *pid = [[NSString alloc] initWithUTF8String:String(p_params["product_id"]).utf8().get_data()];
 
 	return [products_request_delegate purchaseProductWithProductID:pid];
 }

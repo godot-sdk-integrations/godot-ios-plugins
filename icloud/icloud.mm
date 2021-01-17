@@ -34,6 +34,16 @@
 
 #import <Foundation/Foundation.h>
 
+#if VERSION_MAJOR == 4
+typedef PackedByteArray GodotByteArray;
+#define GODOT_FLOAT_VARIANT_TYPE Variant::FLOAT
+#define GODOT_BYTE_ARRAY_VARIANT_TYPE Variant::PACKED_BYTE_ARRAY
+#else
+typedef PoolByteArray GodotByteArray;
+#define GODOT_FLOAT_VARIANT_TYPE Variant::REAL
+#define GODOT_BYTE_ARRAY_VARIANT_TYPE Variant::POOL_BYTE_ARRAY
+#endif
+
 ICloud *ICloud::instance = NULL;
 
 void ICloud::_bind_methods() {
@@ -70,13 +80,18 @@ Variant nsobject_to_variant(NSObject *object) {
 		const char *str = [(NSString *)object UTF8String];
 		return String::utf8(str != NULL ? str : "");
 	} else if ([object isKindOfClass:[NSData class]]) {
-		PackedByteArray ret;
+		GodotByteArray ret;
 		NSData *data = (NSData *)object;
 		if ([data length] > 0) {
 			ret.resize([data length]);
 			{
+				#if VERSION_MAJOR == 4
 				// PackedByteArray::Write w = ret.write();
 				copymem((void *)ret.ptr(), [data bytes], [data length]);
+				#else
+				GodotByteArray::Write w = ret.write();
+				copymem(w.ptr(), [data bytes], [data length]);
+				#endif
 			}
 		}
 		return ret;
@@ -141,7 +156,7 @@ Variant nsobject_to_variant(NSObject *object) {
 NSObject *variant_to_nsobject(Variant v) {
 	if (v.get_type() == Variant::STRING) {
 		return [[NSString alloc] initWithUTF8String:((String)v).utf8().get_data()];
-	} else if (v.get_type() == Variant::FLOAT) {
+	} else if (v.get_type() == GODOT_FLOAT_VARIANT_TYPE) {
 		return [NSNumber numberWithDouble:(double)v];
 	} else if (v.get_type() == Variant::INT) {
 		return [NSNumber numberWithLongLong:(long)(int)v];
@@ -174,10 +189,17 @@ NSObject *variant_to_nsobject(Variant v) {
 			[result addObject:value];
 		}
 		return result;
-	} else if (v.get_type() == Variant::PACKED_BYTE_ARRAY) {
-		PackedByteArray arr = v;
-		// PackedByteArray::Read r = arr.read();
-		NSData *result = [NSData dataWithBytes:arr.ptr() length:arr.size()];
+	} else if (v.get_type() == GODOT_BYTE_ARRAY_VARIANT_TYPE) {
+		GodotByteArray arr = v;
+		NSData *result;
+
+		#if VERSION_MAJOR == 4
+		result = [NSData dataWithBytes:arr.ptr() length:arr.size()];
+		#else
+		GodotByteArray::Read r = arr.read();
+		result = [NSData dataWithBytes:r.ptr() length:arr.size()];
+		#endif
+		
 		return result;
 	}
 	WARN_PRINT(String("Could not add unsupported type to iCloud: '" + Variant::get_type_name(v.get_type()) + "'").utf8().get_data());
@@ -270,7 +292,6 @@ Error ICloud::synchronize_key_values() {
 		return FAILED;
 	}
 }
-
 /*
 Error ICloud::initial_sync() {
 	//you sometimes have to write something to the store to get it to download new data.  go apple!
@@ -285,7 +306,6 @@ Error ICloud::initial_sync() {
 		}
 		return synchronize();
 }
-
 */
 ICloud::ICloud() {
 	ERR_FAIL_COND(instance != NULL);
@@ -303,8 +323,6 @@ ICloud::ICloud() {
 						Dictionary ret;
 						ret["type"] = "key_value_changed";
 
-						//PackedStringArray result_keys;
-						//Array result_values;
 						Dictionary keyValues;
 						String reason = "";
 

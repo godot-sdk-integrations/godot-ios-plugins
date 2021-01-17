@@ -29,11 +29,22 @@
 /*************************************************************************/
 
 #include "game_center.h"
-#import "platform/iphone/app_delegate.h"
 
 #import "game_center_delegate.h"
+#import "platform/iphone/app_delegate.h"
 #import "platform/iphone/view_controller.h"
+
 #import <GameKit/GameKit.h>
+
+#if VERSION_MAJOR == 4
+typedef PackedStringArray GodotStringArray;
+typedef PackedInt32Array GodotIntArray;
+typedef PackedFloat32Array GodotFloatArray;
+#else
+typedef PoolStringArray GodotStringArray;
+typedef PoolIntArray GodotIntArray;
+typedef PoolRealArray GodotFloatArray;
+#endif
 
 GameCenter *GameCenter::instance = NULL;
 GodotGameCenterDelegate *gameCenterDelegate = nil;
@@ -83,12 +94,11 @@ Error GameCenter::authenticate() {
 			ret["type"] = "authentication";
 			if (player.isAuthenticated) {
 				ret["result"] = "ok";
+
 				if (@available(iOS 13, *)) {
 					ret["player_id"] = [player.teamPlayerID UTF8String];
-#if !defined(TARGET_OS_SIMULATOR) || !TARGET_OS_SIMULATOR
 				} else {
 					ret["player_id"] = [player.playerID UTF8String];
-#endif
 				}
 
 				GameCenter::get_singleton()->authenticated = true;
@@ -179,15 +189,16 @@ void GameCenter::request_achievement_descriptions() {
 		ret["type"] = "achievement_descriptions";
 		if (error == nil) {
 			ret["result"] = "ok";
-			PackedStringArray names;
-			PackedStringArray titles;
-			PackedStringArray unachieved_descriptions;
-			PackedStringArray achieved_descriptions;
-			PackedInt32Array maximum_points;
+			GodotStringArray names;
+			GodotStringArray titles;
+			GodotStringArray unachieved_descriptions;
+			GodotStringArray achieved_descriptions;
+			GodotIntArray maximum_points;
 			Array hidden;
 			Array replayable;
 
 			for (NSUInteger i = 0; i < [descriptions count]; i++) {
+
 				GKAchievementDescription *description = [descriptions objectAtIndex:i];
 
 				const char *str = [description.identifier UTF8String];
@@ -232,10 +243,11 @@ void GameCenter::request_achievements() {
 		ret["type"] = "achievements";
 		if (error == nil) {
 			ret["result"] = "ok";
-			PackedStringArray names;
-			PackedFloat32Array percentages;
+			GodotStringArray names;
+			GodotFloatArray percentages;
 
 			for (NSUInteger i = 0; i < [achievements count]; i++) {
+
 				GKAchievement *achievement = [achievements objectAtIndex:i];
 				const char *str = [achievement.identifier UTF8String];
 				names.push_back(String::utf8(str != NULL ? str : ""));
@@ -326,10 +338,8 @@ Error GameCenter::request_identity_verification_signature() {
 			ret["timestamp"] = timestamp;
 			if (@available(iOS 13, *)) {
 				ret["player_id"] = [player.teamPlayerID UTF8String];
-#if !defined(TARGET_OS_SIMULATOR) || !TARGET_OS_SIMULATOR
 			} else {
 				ret["player_id"] = [player.playerID UTF8String];
-#endif
 			}
 		} else {
 			ret["result"] = "error";

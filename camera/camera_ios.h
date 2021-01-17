@@ -31,6 +31,7 @@
 #ifndef CAMERAIOS_H
 #define CAMERAIOS_H
 
+#include "core/version.h"
 #include "servers/camera_server.h"
 
 class CameraIOS : public CameraServer {

@@ -37,6 +37,12 @@
 #import <AVFoundation/AVFoundation.h>
 #import <UIKit/UIKit.h>
 
+#if VERSION_MAJOR == 4
+typedef Vector<uint8_t> GodotUInt8Vector;
+#else
+typedef PoolVector<uint8_t> GodotUInt8Vector;
+#endif
+
 //////////////////////////////////////////////////////////////////////////
 // MyCaptureSession - This is a little helper class so we can capture our frames
 
@@ -44,7 +50,7 @@
 	Ref<CameraFeed> feed;
 	size_t width[2];
 	size_t height[2];
-	Vector<uint8_t> img_data[2];
+	GodotUInt8Vector img_data[2];
 
 	AVCaptureDeviceInput *input;
 	AVCaptureVideoDataOutput *output;
@@ -156,10 +162,8 @@
 
 		if (@available(iOS 13, *)) {
 			orientation = [UIApplication sharedApplication].delegate.window.windowScene.interfaceOrientation;
-#if !defined(TARGET_OS_SIMULATOR) || !TARGET_OS_SIMULATOR
 		} else {
 			orientation = [[UIApplication sharedApplication] statusBarOrientation];
-#endif
 		}
 
 		Ref<Image> img[2];
@@ -175,8 +179,13 @@
 				img_data[0].resize(new_width * new_height);
 			}
 
+			#if VERSION_MAJOR == 4
 			uint8_t *w = img_data[0].ptrw();
 			memcpy(w, dataY, new_width * new_height);
+			#else
+			GodotUInt8Vector::Write w = img_data[0].write();
+			memcpy(w.ptr(), dataY, new_width * new_height);
+			#endif
 
 			img[0].instance();
 			img[0]->create(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
@@ -193,8 +202,13 @@
 				img_data[1].resize(2 * new_width * new_height);
 			}
 
+			#if VERSION_MAJOR == 4
 			uint8_t *w = img_data[1].ptrw();
 			memcpy(w, dataCbCr, 2 * new_width * new_height);
+			#else
+			GodotUInt8Vector::Write w = img_data[1].write();
+			memcpy(w.ptr(), dataCbCr, 2 * new_width * new_height);
+			#endif
 
 			///TODO GLES2 doesn't support FORMAT_RG8, need to do some form of conversion
 			img[1].instance();
@@ -281,11 +295,11 @@ void CameraFeedIOS::set_device(AVCaptureDevice *p_device) {
 CameraFeedIOS::~CameraFeedIOS() {
 	if (capture_session) {
 		capture_session = nil;
-	};
+	}
 
 	if (device) {
 		device = nil;
-	};
+	}
 };
 
 bool CameraFeedIOS::activate_feed() {
@@ -304,7 +318,7 @@ void CameraFeedIOS::deactivate_feed() {
 	if (capture_session) {
 		[capture_session cleanup];
 		capture_session = nil;
-	};
+	}
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -352,56 +366,54 @@ void CameraIOS::update_feeds() {
 
 	NSMutableArray *deviceTypes = [NSMutableArray array];
 
-	if (@available(iOS 10, *)) {
-		[deviceTypes addObject:AVCaptureDeviceTypeBuiltInWideAngleCamera];
-		[deviceTypes addObject:AVCaptureDeviceTypeBuiltInTelephotoCamera];
+	[deviceTypes addObject:AVCaptureDeviceTypeBuiltInWideAngleCamera];
+	[deviceTypes addObject:AVCaptureDeviceTypeBuiltInTelephotoCamera];
 
-		if (@available(iOS 10.2, *)) {
-			[deviceTypes addObject:AVCaptureDeviceTypeBuiltInDualCamera];
+	if (@available(iOS 10.2, *)) {
+		[deviceTypes addObject:AVCaptureDeviceTypeBuiltInDualCamera];
+	}
+
+	if (@available(iOS 11.1, *)) {
+		[deviceTypes addObject:AVCaptureDeviceTypeBuiltInTrueDepthCamera];
+	}
+
+	AVCaptureDeviceDiscoverySession *session = [AVCaptureDeviceDiscoverySession
+			discoverySessionWithDeviceTypes:deviceTypes
+								  mediaType:AVMediaTypeVideo
+								   position:AVCaptureDevicePositionUnspecified];
+
+	// remove devices that are gone..
+	for (int i = feeds.size() - 1; i >= 0; i--) {
+		Ref<CameraFeedIOS> feed(feeds[i]);
+
+		if (feed.is_null()) {
+			// feed not managed by us
+		} else if (![session.devices containsObject:feed->get_device()]) {
+			// remove it from our array, this will also destroy it ;)
+			remove_feed(feed);
 		}
+	}
 
-		if (@available(iOS 11.1, *)) {
-			[deviceTypes addObject:AVCaptureDeviceTypeBuiltInTrueDepthCamera];
-		}
+	// add new devices..
+	for (AVCaptureDevice *device in session.devices) {
+		bool found = false;
 
-		AVCaptureDeviceDiscoverySession *session = [AVCaptureDeviceDiscoverySession
-				discoverySessionWithDeviceTypes:deviceTypes
-									  mediaType:AVMediaTypeVideo
-									   position:AVCaptureDevicePositionUnspecified];
-
-		// remove devices that are gone..
-		for (int i = feeds.size() - 1; i >= 0; i--) {
+		for (int i = 0; i < feeds.size() && !found; i++) {
 			Ref<CameraFeedIOS> feed(feeds[i]);
 
 			if (feed.is_null()) {
 				// feed not managed by us
-			} else if (![session.devices containsObject:feed->get_device()]) {
-				// remove it from our array, this will also destroy it ;)
-				remove_feed(feed);
-			};
-		};
+			} else if (feed->get_device() == device) {
+				found = true;
+			}
+		}
 
-		// add new devices..
-		for (AVCaptureDevice *device in session.devices) {
-			bool found = false;
-
-			for (int i = 0; i < feeds.size() && !found; i++) {
-				Ref<CameraFeedIOS> feed(feeds[i]);
-
-				if (feed.is_null()) {
-					// feed not managed by us
-				} else if (feed->get_device() == device) {
-					found = true;
-				};
-			};
-
-			if (!found) {
-				Ref<CameraFeedIOS> newfeed;
-				newfeed.instance();
-				newfeed->set_device(device);
-				add_feed(newfeed);
-			};
-		};
+		if (!found) {
+			Ref<CameraFeedIOS> newfeed;
+			newfeed.instance();
+			newfeed->set_device(device);
+			add_feed(newfeed);
+		}
 	}
 };
 

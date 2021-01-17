@@ -31,9 +31,16 @@
 #ifndef ICLOUD_H
 #define ICLOUD_H
 
+#include "core/version.h"
+
+#if VERSION_MAJOR == 4
 #include "core/object/class_db.h"
+#else
+#include "core/object.h"
+#endif
 
 class ICloud : public Object {
+
 	GDCLASS(ICloud, Object);
 
 	static ICloud *instance;

@@ -162,7 +162,8 @@ sources.append(Glob(env['plugin'] + '/*.mm'))
 sources.append(Glob(env['plugin'] + '/*.m'))
 
 # lib<plugin>.<arch>-<simulator|iphone>.<release|debug|release_debug>.a
-library_name = env['plugin'] + "." + env["arch"] + "-" + ("simulator" if env["simulator"] else "iphone") + "." + env["target"] + ".a"
+library_platform = env["arch"] + "-" + ("simulator" if env["simulator"] else "iphone")
+library_name = env['plugin'] + "." + library_platform + "." + env["target"] + ".a"
 library = env.StaticLibrary(target=env['target_path'] + library_name, source=sources)
 
 Default(library)
