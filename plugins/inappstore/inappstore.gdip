@@ -1,6 +1,6 @@
 [config]
 name="InAppStore"
-binary="inappstore_lib.a"
+binary="inappstore.a"
 
 initialization="register_inappstore_types"
 deinitialization="unregister_inappstore_types"

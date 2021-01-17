@@ -1,6 +1,6 @@
 [config]
 name="Camera"
-binary="camera_lib.a"
+binary="camera.a"
 
 initialization="register_camera_types"
 deinitialization="unregister_camera_types"
