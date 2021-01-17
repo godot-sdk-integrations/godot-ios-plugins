@@ -28,10 +28,41 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include "core/input/input.h"
+#include "core/version.h"
 #include "core/os/os.h"
 #include "scene/resources/surface_tool.h"
+
+#if VERSION_MAJOR == 4
+#include "core/input/input.h"
 #include "servers/rendering/rendering_server_globals.h"
+
+#define GODOT_FOCUS_IN_NOTIFICATION DisplayServer::WINDOW_EVENT_FOCUS_IN
+#define GODOT_FOCUS_OUT_NOTIFICATION DisplayServer::WINDOW_EVENT_FOCUS_OUT
+
+#define GODOT_MAKE_THREAD_SAFE ;
+
+#define GODOT_AR_STATE_NOT_TRACKING XRInterface::XR_NOT_TRACKING
+#define GODOT_AR_STATE_NORMAL_TRACKING XRInterface::XR_NORMAL_TRACKING
+#define GODOT_AR_STATE_EXCESSIVE_MOTION XRInterface::XR_EXCESSIVE_MOTION
+#define GODOT_AR_STATE_INSUFFICIENT_FEATURES XRInterface::XR_INSUFFICIENT_FEATURES
+#define GODOT_AR_STATE_UNKNOWN_TRACKING XRInterface::XR_UNKNOWN_TRACKING
+
+#else
+
+#include "core/os/input.h"
+#include "servers/visual/visual_server_globals.h"
+
+#define GODOT_FOCUS_IN_NOTIFICATION MainLoop::NOTIFICATION_WM_FOCUS_IN
+#define GODOT_FOCUS_OUT_NOTIFICATION MainLoop::NOTIFICATION_WM_FOCUS_OUT
+
+#define GODOT_MAKE_THREAD_SAFE _THREAD_SAFE_METHOD_
+
+#define GODOT_AR_STATE_NOT_TRACKING ARVRInterface::ARVR_NOT_TRACKING
+#define GODOT_AR_STATE_NORMAL_TRACKING ARVRInterface::ARVR_NORMAL_TRACKING
+#define GODOT_AR_STATE_EXCESSIVE_MOTION ARVRInterface::ARVR_EXCESSIVE_MOTION
+#define GODOT_AR_STATE_INSUFFICIENT_FEATURES ARVRInterface::ARVR_INSUFFICIENT_FEATURES
+#define GODOT_AR_STATE_UNKNOWN_TRACKING ARVRInterface::ARVR_UNKNOWN_TRACKING
+#endif
 
 #import <ARKit/ARKit.h>
 #import <UIKit/UIKit.h>
@@ -102,12 +133,12 @@ void ARKitInterface::notification(int p_what) {
 	// TODO, this is not being called, need to find out why, possibly because this is not a node.
 	// in that case we need to find a way to get these notifications!
 	switch (p_what) {
-		case DisplayServer::WINDOW_EVENT_FOCUS_IN: {
+		case GODOT_FOCUS_IN_NOTIFICATION: {
 			print_line("Focus in");
 
 			start_session();
 		}; break;
-		case DisplayServer::WINDOW_EVENT_FOCUS_OUT: {
+		case GODOT_FOCUS_OUT_NOTIFICATION: {
 			print_line("Focus out");
 
 			stop_session();
@@ -168,19 +199,26 @@ StringName ARKitInterface::get_name() const {
 }
 
 int ARKitInterface::get_capabilities() const {
+	#if VERSION_MAJOR == 4
 	return ARKitInterface::XR_MONO + ARKitInterface::XR_AR;
+	#else
+	return ARKitInterface::ARVR_MONO + ARKitInterface::ARVR_AR;
+	#endif
 }
 
 Array ARKitInterface::raycast(Vector2 p_screen_coord) {
 	if (@available(iOS 11, *)) {
 		Array arr;
+		#if VERSION_MAJOR == 4
 		Size2 screen_size = DisplayServer::get_singleton()->screen_get_size();
+		#else
+		Size2 screen_size = OS::get_singleton()->get_window_size();
+		#endif
 		CGPoint point;
 		point.x = p_screen_coord.x / screen_size.x;
 		point.y = p_screen_coord.y / screen_size.y;
 
 		///@TODO maybe give more options here, for now we're taking just ARAchors into account that were found during plane detection keeping their size into account
-
 		NSArray<ARHitTestResult *> *results = [ar_session.currentFrame hitTest:point types:ARHitTestResultTypeExistingPlaneUsingExtent];
 
 		for (ARHitTestResult *result in results) {
@@ -233,8 +271,13 @@ bool ARKitInterface::is_initialized() const {
 }
 
 bool ARKitInterface::initialize() {
-	XRServer *xr_server = XRServer::get_singleton();
-	ERR_FAIL_NULL_V(xr_server, false);
+	#if VERSION_MAJOR == 4
+	XRServer *ar_server = XRServer::get_singleton();
+	#else
+	ARVRServer *ar_server = ARVRServer::get_singleton();
+	#endif
+
+	ERR_FAIL_NULL_V(ar_server, false);
 
 	if (@available(iOS 11, *)) {
 		if (!initialized) {
@@ -260,7 +303,7 @@ bool ARKitInterface::initialize() {
 			transform = Transform();
 
 			// make this our primary interface
-			xr_server->set_primary_interface(this);
+			ar_server->set_primary_interface(this);
 
 			// make sure we have our feed setup
 			if (feed.is_null()) {
@@ -289,10 +332,14 @@ bool ARKitInterface::initialize() {
 
 void ARKitInterface::uninitialize() {
 	if (initialized) {
-		XRServer *xr_server = XRServer::get_singleton();
-		if (xr_server != NULL) {
+		#if VERSION_MAJOR == 4
+		XRServer *ar_server = XRServer::get_singleton();
+		#else
+		ARVRServer *ar_server = ARVRServer::get_singleton();
+		#endif
+		if (ar_server != NULL) {
 			// no longer our primary interface
-			xr_server->clear_primary_interface_if(this);
+			ar_server->clear_primary_interface_if(this);
 		}
 
 		if (feed.is_valid()) {
@@ -316,29 +363,38 @@ void ARKitInterface::uninitialize() {
 }
 
 Size2 ARKitInterface::get_render_targetsize() {
-	// _THREAD_SAFE_METHOD_
+	GODOT_MAKE_THREAD_SAFE
 
+	#if VERSION_MAJOR == 4
 	Size2 target_size = DisplayServer::get_singleton()->screen_get_size();
+	#else
+	Size2 target_size = OS::get_singleton()->get_window_size();
+	#endif
 
 	return target_size;
 }
 
-Transform ARKitInterface::get_transform_for_eye(XRInterface::Eyes p_eye, const Transform &p_cam_transform) {
-	// _THREAD_SAFE_METHOD_
+Transform ARKitInterface::get_transform_for_eye(GodotBaseARInterface::Eyes p_eye, const Transform &p_cam_transform) {
+	GODOT_MAKE_THREAD_SAFE
 
 	Transform transform_for_eye;
 
-	XRServer *xr_server = XRServer::get_singleton();
-	ERR_FAIL_NULL_V(xr_server, transform_for_eye);
+	#if VERSION_MAJOR == 4
+	XRServer *ar_server = XRServer::get_singleton();
+	#else
+	ARVRServer *ar_server = ARVRServer::get_singleton();
+	#endif
+
+	ERR_FAIL_NULL_V(ar_server, transform_for_eye);
 
 	if (initialized) {
-		float world_scale = xr_server->get_world_scale();
+		float world_scale = ar_server->get_world_scale();
 
 		// just scale our origin point of our transform, note that we really shouldn't be using world_scale in ARKit but....
 		transform_for_eye = transform;
 		transform_for_eye.origin *= world_scale;
 
-		transform_for_eye = p_cam_transform * xr_server->get_reference_frame() * transform_for_eye;
+		transform_for_eye = p_cam_transform * ar_server->get_reference_frame() * transform_for_eye;
 	} else {
 		// huh? well just return what we got....
 		transform_for_eye = p_cam_transform;
@@ -347,7 +403,7 @@ Transform ARKitInterface::get_transform_for_eye(XRInterface::Eyes p_eye, const T
 	return transform_for_eye;
 }
 
-CameraMatrix ARKitInterface::get_projection_for_eye(XRInterface::Eyes p_eye, real_t p_aspect, real_t p_z_near, real_t p_z_far) {
+CameraMatrix ARKitInterface::get_projection_for_eye(GodotBaseARInterface::Eyes p_eye, real_t p_aspect, real_t p_z_near, real_t p_z_far) {
 	// Remember our near and far, it will be used in process when we obtain our projection from our ARKit session.
 	z_near = p_z_near;
 	z_far = p_z_far;
@@ -355,8 +411,8 @@ CameraMatrix ARKitInterface::get_projection_for_eye(XRInterface::Eyes p_eye, rea
 	return projection;
 }
 
-void ARKitInterface::commit_for_eye(XRInterface::Eyes p_eye, RID p_render_target, const Rect2 &p_screen_rect) {
-	// _THREAD_SAFE_METHOD_
+void ARKitInterface::commit_for_eye(GodotBaseARInterface::Eyes p_eye, RID p_render_target, const Rect2 &p_screen_rect) {
+	GODOT_MAKE_THREAD_SAFE
 
 	// We must have a valid render target
 	ERR_FAIL_COND(!p_render_target.is_valid());
@@ -364,19 +420,22 @@ void ARKitInterface::commit_for_eye(XRInterface::Eyes p_eye, RID p_render_target
 	// Because we are rendering to our device we must use our main viewport!
 	ERR_FAIL_COND(p_screen_rect == Rect2());
 
+	#if VERSION_MAJOR == 4
+	#else
 	// get the size of our screen
-	//	Rect2 screen_rect = p_screen_rect;
+	Rect2 screen_rect = p_screen_rect;
 
 	//		screen_rect.position.x += screen_rect.size.x;
 	//		screen_rect.size.x = -screen_rect.size.x;
 	//		screen_rect.position.y += screen_rect.size.y;
 	//		screen_rect.size.y = -screen_rect.size.y;
 
-	//	VSG::rasterizer->set_current_render_target(RID());
-	//	VSG::rasterizer->blit_render_target_to_screen(p_render_target, screen_rect, 0);
+	VSG::rasterizer->set_current_render_target(RID());
+	VSG::rasterizer->blit_render_target_to_screen(p_render_target, screen_rect, 0);
+	#endif
 }
 
-XRPositionalTracker *ARKitInterface::get_anchor_for_uuid(const unsigned char *p_uuid) {
+GodotARTracker *ARKitInterface::get_anchor_for_uuid(const unsigned char *p_uuid) {
 	if (anchors == NULL) {
 		num_anchors = 0;
 		max_anchors = 10;
@@ -397,18 +456,31 @@ XRPositionalTracker *ARKitInterface::get_anchor_for_uuid(const unsigned char *p_
 		ERR_FAIL_NULL_V(anchors, NULL);
 	}
 
+	#if VERSION_MAJOR == 4
 	XRPositionalTracker *new_tracker = memnew(XRPositionalTracker);
 	new_tracker->set_tracker_type(XRServer::TRACKER_ANCHOR);
+	#else
+	ARVRPositionalTracker *new_tracker = memnew(ARVRPositionalTracker);
+	new_tracker->set_type(ARVRServer::TRACKER_ANCHOR);
+	#endif
 
 	char tracker_name[256];
 	sprintf(tracker_name, "Anchor %02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x", p_uuid[0], p_uuid[1], p_uuid[2], p_uuid[3], p_uuid[4], p_uuid[5], p_uuid[6], p_uuid[7], p_uuid[8], p_uuid[9], p_uuid[10], p_uuid[11], p_uuid[12], p_uuid[13], p_uuid[14], p_uuid[15]);
 
 	String name = tracker_name;
 	print_line("Adding tracker " + name);
+	#if VERSION_MAJOR == 4
 	new_tracker->set_tracker_name(name);
+	#else
+	new_tracker->set_name(name);
+	#endif
 
 	// add our tracker
+	#if VERSION_MAJOR == 4
 	XRServer::get_singleton()->add_tracker(new_tracker);
+	#else
+	ARVRServer::get_singleton()->add_tracker(new_tracker);
+	#endif
 	anchors[num_anchors].tracker = new_tracker;
 	memcpy(anchors[num_anchors].uuid, p_uuid, 16);
 	num_anchors++;
@@ -421,7 +493,11 @@ void ARKitInterface::remove_anchor_for_uuid(const unsigned char *p_uuid) {
 		for (unsigned int i = 0; i < num_anchors; i++) {
 			if (memcmp(anchors[i].uuid, p_uuid, 16) == 0) {
 				// remove our tracker
+				#if VERSION_MAJOR == 4
 				XRServer::get_singleton()->remove_tracker(anchors[i].tracker);
+				#else
+				ARVRServer::get_singleton()->remove_tracker(anchors[i].tracker);
+				#endif
 				memdelete(anchors[i].tracker);
 
 				// bring remaining forward
@@ -441,7 +517,11 @@ void ARKitInterface::remove_all_anchors() {
 	if (anchors != NULL) {
 		for (unsigned int i = 0; i < num_anchors; i++) {
 			// remove our tracker
+			#if VERSION_MAJOR == 4
 			XRServer::get_singleton()->remove_tracker(anchors[i].tracker);
+			#else
+			ARVRServer::get_singleton()->remove_tracker(anchors[i].tracker);
+			#endif
 			memdelete(anchors[i].tracker);
 		};
 
@@ -452,7 +532,7 @@ void ARKitInterface::remove_all_anchors() {
 }
 
 void ARKitInterface::process() {
-	// _THREAD_SAFE_METHOD_
+	GODOT_MAKE_THREAD_SAFE
 
 	if (@available(iOS 11.0, *)) {
 		if (initialized) {
@@ -463,15 +543,17 @@ void ARKitInterface::process() {
 				last_timestamp = current_frame.timestamp;
 
 				// get some info about our screen and orientation
+				#if VERSION_MAJOR == 4
 				Size2 screen_size = DisplayServer::get_singleton()->screen_get_size();
+				#else
+				Size2 screen_size = OS::get_singleton()->get_window_size();
+				#endif
 				UIInterfaceOrientation orientation = UIInterfaceOrientationUnknown;
 
 				if (@available(iOS 13, *)) {
 					orientation = [UIApplication sharedApplication].delegate.window.windowScene.interfaceOrientation;
-#if !defined(TARGET_OS_SIMULATOR) || !TARGET_OS_SIMULATOR
 				} else {
 					orientation = [[UIApplication sharedApplication] statusBarOrientation];
-#endif
 				}
 
 				// Grab our camera image for our backbuffer
@@ -516,14 +598,27 @@ void ARKitInterface::process() {
 								img_data[0].resize(new_width * new_height);
 							}
 
+							#if VERSION_MAJOR == 4
 							uint8_t *w = img_data[0].ptrw();
+							#else
+							PoolVector<uint8_t>::Write w = img_data[0].write();
+							#endif
+
 							if (new_width == bytes_per_row) {
+								#if VERSION_MAJOR == 4
 								memcpy(w, dataY, new_width * new_height);
+								#else
+								memcpy(w.ptr(), dataY, new_width * new_height);
+								#endif
 							} else {
 								size_t offset_a = 0;
 								size_t offset_b = extraLeft + (extraTop * bytes_per_row);
 								for (size_t r = 0; r < new_height; r++) {
+									#if VERSION_MAJOR == 4
 									memcpy(w + offset_a, dataY + offset_b, new_width);
+									#else
+									memcpy(w.ptr() + offset_a, dataY + offset_b, new_width);
+									#endif
 									offset_a += new_width;
 									offset_b += bytes_per_row;
 								}
@@ -547,14 +642,28 @@ void ARKitInterface::process() {
 								img_data[1].resize(2 * new_width * new_height);
 							}
 
+
+							#if VERSION_MAJOR == 4
 							uint8_t *w = img_data[1].ptrw();
+							#else
+							PoolVector<uint8_t>::Write w = img_data[1].write();
+							#endif
+
 							if ((2 * new_width) == bytes_per_row) {
+								#if VERSION_MAJOR == 4
 								memcpy(w, dataCbCr, 2 * new_width * new_height);
+								#else
+								memcpy(w.ptr(), dataCbCr, 2 * new_width * new_height);
+								#endif
 							} else {
 								size_t offset_a = 0;
 								size_t offset_b = extraLeft + (extraTop * bytes_per_row);
 								for (size_t r = 0; r < new_height; r++) {
+									#if VERSION_MAJOR == 4
 									memcpy(w + offset_a, dataCbCr + offset_b, 2 * new_width);
+									#else
+									memcpy(w.ptr() + offset_a, dataCbCr + offset_b, 2 * new_width);
+									#endif
 									offset_a += 2 * new_width;
 									offset_b += bytes_per_row;
 								}
@@ -610,16 +719,16 @@ void ARKitInterface::process() {
 				// strangely enough we have to states, rolling them up into one
 				if (camera.trackingState == ARTrackingStateNotAvailable) {
 					// no tracking, would be good if we black out the screen or something...
-					tracking_state = XRInterface::XR_NOT_TRACKING;
+					tracking_state = GODOT_AR_STATE_NOT_TRACKING;
 				} else {
 					if (camera.trackingState == ARTrackingStateNormal) {
-						tracking_state = XRInterface::XR_NORMAL_TRACKING;
+						tracking_state = GODOT_AR_STATE_NOT_TRACKING;
 					} else if (camera.trackingStateReason == ARTrackingStateReasonExcessiveMotion) {
-						tracking_state = XRInterface::XR_EXCESSIVE_MOTION;
+						tracking_state = GODOT_AR_STATE_EXCESSIVE_MOTION;
 					} else if (camera.trackingStateReason == ARTrackingStateReasonInsufficientFeatures) {
-						tracking_state = XRInterface::XR_INSUFFICIENT_FEATURES;
+						tracking_state = GODOT_AR_STATE_INSUFFICIENT_FEATURES;
 					} else {
-						tracking_state = XRInterface::XR_UNKNOWN_TRACKING;
+						tracking_state = GODOT_AR_STATE_UNKNOWN_TRACKING;
 					}
 
 					// copy our current frame transform
@@ -686,7 +795,7 @@ void ARKitInterface::process() {
 }
 
 void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
-	// _THREAD_SAFE_METHOD_
+	GODOT_MAKE_THREAD_SAFE
 
 	if (@available(iOS 11.0, *)) {
 		ARAnchor *anchor = (ARAnchor *)p_anchor;
@@ -694,7 +803,12 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 		unsigned char uuid[16];
 		[anchor.identifier getUUIDBytes:uuid];
 
+		#if VERSION_MAJOR == 4
 		XRPositionalTracker *tracker = get_anchor_for_uuid(uuid);
+		#else
+		ARVRPositionalTracker *tracker = get_anchor_for_uuid(uuid);
+		#endif
+
 		if (tracker != NULL) {
 			// lets update our mesh! (using Arjens code as is for now)
 			// we should also probably limit how often we do this...
@@ -712,8 +826,13 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 						int16_t index = planeAnchor.geometry.triangleIndices[j];
 						simd_float3 vrtx = planeAnchor.geometry.vertices[index];
 						simd_float2 textcoord = planeAnchor.geometry.textureCoordinates[index];
+						#if VERSION_MAJOR == 4
 						surftool->set_uv(Vector2(textcoord[0], textcoord[1]));
 						surftool->set_color(Color(0.8, 0.8, 0.8));
+						#else
+						surftool->add_uv(Vector2(textcoord[0], textcoord[1]));
+						surftool->add_color(Color(0.8, 0.8, 0.8));
+						#endif
 						surftool->add_vertex(Vector3(vrtx[0], vrtx[1], vrtx[2]));
 					}
 
@@ -729,7 +848,7 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 			}
 
 			// Note, this also contains a scale factor which gives us an idea of the size of the anchor
-			// We may extract that in our XRAnchor class
+			// We may extract that in our XRAnchor/ARVRAnchor class
 			Basis b;
 			matrix_float4x4 m44 = anchor.transform;
 			b.elements[0].x = m44.columns[0][0];
@@ -748,7 +867,7 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 }
 
 void ARKitInterface::_remove_anchor(GodotARAnchor *p_anchor) {
-	// _THREAD_SAFE_METHOD_
+	GODOT_MAKE_THREAD_SAFE
 
 	if (@available(iOS 11.0, *)) {
 		ARAnchor *anchor = (ARAnchor *)p_anchor;

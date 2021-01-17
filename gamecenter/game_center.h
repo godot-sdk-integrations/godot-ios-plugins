@@ -31,9 +31,16 @@
 #ifndef GAME_CENTER_H
 #define GAME_CENTER_H
 
+#include "core/version.h"
+
+#if VERSION_MAJOR == 4
 #include "core/object/class_db.h"
+#else
+#include "core/object.h"
+#endif
 
 class GameCenter : public Object {
+
 	GDCLASS(GameCenter, Object);
 
 	static GameCenter *instance;

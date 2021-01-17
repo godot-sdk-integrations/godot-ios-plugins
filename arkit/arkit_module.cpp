@@ -30,6 +30,7 @@
 
 #include "arkit_module.h"
 
+#include "core/version.h"
 #include "arkit_interface.h"
 
 void register_arkit_types() {
@@ -37,7 +38,12 @@ void register_arkit_types() {
 
 	Ref<ARKitInterface> arkit_interface;
 	arkit_interface.instance();
+
+	#if VERSION_MAJOR == 4
 	XRServer::get_singleton()->add_interface(arkit_interface);
+	#else
+	ARVRServer::get_singleton()->add_interface(arkit_interface);
+	#endif
 }
 
 void unregister_arkit_types() {

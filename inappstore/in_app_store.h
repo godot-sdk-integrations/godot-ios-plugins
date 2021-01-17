@@ -31,7 +31,13 @@
 #ifndef IN_APP_STORE_H
 #define IN_APP_STORE_H
 
+#include "core/version.h"
+
+#if VERSION_MAJOR == 4
 #include "core/object/class_db.h"
+#else
+#include "core/object.h"
+#endif
 
 #ifdef __OBJC__
 @class GodotProductsDelegate;
@@ -45,6 +51,7 @@ typedef void InAppStoreTransactionObserver;
 #endif
 
 class InAppStore : public Object {
+
 	GDCLASS(InAppStore, Object);
 
 	static InAppStore *instance;
