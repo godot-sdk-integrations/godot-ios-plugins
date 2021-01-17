@@ -19,14 +19,13 @@ opts = Variables([], ARGUMENTS)
 env = DefaultEnvironment()
 
 # Define our options
-opts.Add(EnumVariable('target', "Compilation target", 'debug', ['d', 'debug', 'r', 'release']))
-opts.Add(EnumVariable('platform', "Compilation platform", '', ['', 'ios']))
-opts.Add(EnumVariable('p', "Compilation target, alias for 'platform'", '', ['','ios']))
-opts.Add(EnumVariable('arch', "Compilation platform", '', ['', 'arm64', 'armv7', 'x86_64']))
+opts.Add(EnumVariable('target', "Compilation target", 'debug', ['debug', 'release', "release_debug"]))
+opts.Add(EnumVariable('arch', "Compilation Architecture", '', ['', 'arm64', 'armv7', 'x86_64']))
+opts.Add(BoolVariable('simulator', "Compilation platform", 'no'))
 opts.Add(BoolVariable('use_llvm', "Use the LLVM / Clang compiler", 'no'))
 opts.Add(PathVariable('target_path', 'The path where the lib is installed.', 'bin/'))
-opts.Add(PathVariable('target_name', 'The library name.', 'gdexample', PathVariable.PathAccept))
-opts.Add(EnumVariable('mode', 'Library build mode', 'static', ['static', 'dynamic']))
+opts.Add(EnumVariable('plugin', 'Plugin to build', '', ['', 'arkit', 'camera', 'icloud', 'gamecenter', 'inappstore']))
+opts.Add(EnumVariable('version', 'Godot version to target', '', ['', '3.2', '4.0']))
 
 # Local dependency paths, adapt them to your setup
 godot_path = "godot/"
@@ -40,11 +39,16 @@ if env['use_llvm']:
     env['CC'] = 'clang'
     env['CXX'] = 'clang++'
 
-if env['p'] != '':
-    env['platform'] = env['p']
+if env['arch'] == '':
+    print("No valid arch selected.")
+    quit();
 
-if env['platform'] == '':
-    print("No valid target platform selected.")
+if env['plugin'] == '':
+    print("No valid plugin selected.")
+    quit();
+
+if env['version'] == '':
+    print("No valid Godot version selected.")
     quit();
 
 # For the reference:
@@ -55,72 +59,111 @@ if env['platform'] == '':
 # - CPPDEFINES are for pre-processor defines
 # - LINKFLAGS are for linking flags
 
-# Check our platform specifics
-if env['platform'] == "ios":
-    env.Append(CCFLAGS=["-fmodules", "-fcxx-modules"])
+# Enable Obj-C modules
+env.Append(CCFLAGS=["-fmodules", "-fcxx-modules"])
 
-    if env['arch'] == 'x86_64':
-        sdk_name = 'iphonesimulator'
-        env.Append(CCFLAGS=['-mios-simulator-version-min=10.0'])
+if env['simulator']:
+    sdk_name = 'iphonesimulator'
+    env.Append(CCFLAGS=['-mios-simulator-version-min=10.0'])
+    env.Append(LINKFLAGS=["-mios-simulator-version-min=10.0"])
+else:
+    sdk_name = 'iphoneos'
+    env.Append(CCFLAGS=['-miphoneos-version-min=10.0'])
+    env.Append(LINKFLAGS=["-miphoneos-version-min=10.0"])
+
+try:
+    sdk_path = decode_utf8(subprocess.check_output(['xcrun', '--sdk', sdk_name, '--show-sdk-path']).strip())
+except (subprocess.CalledProcessError, OSError):
+    raise ValueError("Failed to find SDK path while running xcrun --sdk {} --show-sdk-path.".format(sdk_name))
+
+env.Append(CCFLAGS=[
+    '-fobjc-arc', 
+    '-fmessage-length=0', '-fno-strict-aliasing', '-fdiagnostics-print-source-range-info', 
+    '-fdiagnostics-show-category=id', '-fdiagnostics-parseable-fixits', '-fpascal-strings', 
+    '-fblocks', '-fvisibility=hidden', '-MMD', '-MT', 'dependencies', '-fno-exceptions', 
+    '-Wno-ambiguous-macro', 
+    '-Wall', '-Werror=return-type',
+    # '-Wextra',
+])
+
+env.Append(CCFLAGS=['-arch', env['arch'], "-isysroot", "$IPHONESDK", "-stdlib=libc++", '-isysroot', sdk_path])
+env.Append(CCFLAGS=['-DPTRCALL_ENABLED'])
+env.Prepend(CXXFLAGS=[
+    '-DNEED_LONG_INT', '-DLIBYUV_DISABLE_NEON', 
+    '-DIPHONE_ENABLED', '-DUNIX_ENABLED', '-DCOREAUDIO_ENABLED'
+])
+env.Append(LINKFLAGS=["-arch", env['arch'], '-isysroot', sdk_path, '-F' + sdk_path])
+
+if env['version'] == '3.2':
+    env.Prepend(CFLAGS=['-std=gnu11'])
+    env.Prepend(CXXFLAGS=['-DGLES_ENABLED', '-std=gnu++14'])
+
+    if env['target'] == 'debug':
+        env.Prepend(CXXFLAGS=[
+            '-gdwarf-2', '-O0', 
+            '-DDEBUG_MEMORY_ALLOC', '-DDISABLE_FORCED_INLINE', 
+            '-D_DEBUG', '-DDEBUG=1', '-DDEBUG_ENABLED',
+            '-DPTRCALL_ENABLED',
+        ])
+    elif env['target'] == 'release_debug':
+        env.Prepend(CXXFLAGS=['-O2', '-ftree-vectorize', '-fomit-frame-pointer', 
+            '-DNDEBUG', '-DNS_BLOCK_ASSERTIONS=1', '-DDEBUG_ENABLED', 
+            '-DPTRCALL_ENABLED',
+        ])
     else:
-        sdk_name = 'iphoneos'
-        env.Append(CCFLAGS=['-miphoneos-version-min=10.0'])
+        env.Prepend(CXXFLAGS=[
+            '-O2', '-ftree-vectorize', '-fomit-frame-pointer', 
+            '-DNDEBUG', '-DNS_BLOCK_ASSERTIONS=1', 
+            '-DPTRCALL_ENABLED',
+        ])
+elif env['version'] == '4.0':
+    env.Prepend(CFLAGS=['-std=gnu11'])
+    env.Prepend(CXXFLAGS=['-DVULKAN_ENABLED', '-std=gnu++17'])
 
-    try:
-        sdk_path = decode_utf8(subprocess.check_output(['xcrun', '--sdk', sdk_name, '--show-sdk-path']).strip())
-    except (subprocess.CalledProcessError, OSError):
-        raise ValueError("Failed to find SDK path while running xcrun --sdk {} --show-sdk-path.".format(sdk_name))
-    
-    env['target_path'] += 'ios/'
-    env.Append(CCFLAGS=['-arch', env['arch'], "-isysroot", "$IPHONESDK", "-stdlib=libc++", '-isysroot', sdk_path])
-    env.Append(CXXFLAGS=['-std=c++17'])
-    env.Append(CCFLAGS=['-DPTRCALL_ENABLED'])
-
-    if env['target'] in ('debug', 'd'):
-        env.Append(CCFLAGS=['-g', '-O2', '-DDEBUG', '-DDEBUG_ENABLED', '-DDEBUG_MEMORY_ALLOC', '-DDISABLE_FORCED_INLINE', '-DTYPED_METHOD_BIND'])
+    if env['target'] == 'debug':
+        env.Prepend(CXXFLAGS=[
+            '-gdwarf-2', '-O0', 
+            '-DDEBUG_MEMORY_ALLOC', '-DDISABLE_FORCED_INLINE', 
+            '-D_DEBUG', '-DDEBUG=1', '-DDEBUG_ENABLED', 
+        ])
+    elif env['target'] == 'release_debug':
+        env.Prepend(CXXFLAGS=[
+            '-O2', '-ftree-vectorize', '-fomit-frame-pointer', 
+            '-DNDEBUG', '-DNS_BLOCK_ASSERTIONS=1', '-DDEBUG_ENABLED',
+        ])
     else:
-        env.Append(CCFLAGS=['-g', '-O3'])
-    
+        env.Prepend(CXXFLAGS=[
+            '-O2', '-ftree-vectorize', '-fomit-frame-pointer',
+            '-DNDEBUG', '-DNS_BLOCK_ASSERTIONS=1',
+        ])
+else:
+    print("No valid version to set flags for.")
+    quit();
 
-    env.Append(
-        CCFLAGS="-fmessage-length=0 -fno-strict-aliasing -fdiagnostics-print-source-range-info -fdiagnostics-show-category=id -fdiagnostics-parseable-fixits -fpascal-strings -fblocks -fvisibility=hidden -MMD -MT dependencies -miphoneos-version-min=10.0".split()
-    )
-    env.Append(LINKFLAGS=[])
-
-    env.Append(
-        LINKFLAGS=[
-            "-arch", 
-            env['arch'],
-            "-miphoneos-version-min=10.0",
-            '-isysroot', sdk_path,
-            '-F' + sdk_path
-        ]
-    )
-
-# make sure our binding library is properly includes
+# Adding header files
 env.Append(CPPPATH=[
     '.', 
-    godot_path, 
-    godot_path + 'main/', 
-    godot_path + 'core/', 
-    godot_path + 'core/os/', 
-    godot_path + 'core/platform/',
-    godot_path + 'platform/iphone/',
-    godot_path + 'modules/',
-    godot_path + 'scene/',
-    godot_path + 'servers/',
-    godot_path + 'drivers/',
-    godot_path + 'thirdparty/',
+    'godot_headers', 
+    'godot_headers/main', 
+    'godot_headers/core', 
+    'godot_headers/core/os', 
+    'godot_headers/core/platform',
+    'godot_headers/platform/iphone',
+    'godot_headers/modules',
+    'godot_headers/scene',
+    'godot_headers/servers',
+    'godot_headers/drivers',
+    'godot_headers/thirdparty',
 ])
-env.Append(LIBPATH=[godot_path + 'bin/'])
-env.Append(LIBS=[godot_library])
 
 # tweak this if you want to use different folders, or more folders, to store your source code in.
-sources = Glob('godot_plugin/*.cpp')
-sources.append(Glob("godot_plugin/*.mm"))
-sources.append(Glob("godot_plugin/*.m"))
+sources = Glob(env['plugin'] + '/*.cpp')
+sources.append(Glob(env['plugin'] + '/*.mm'))
+sources.append(Glob(env['plugin'] + '/*.m'))
 
-library = env.StaticLibrary(target=env['target_path'] + env['target_name'] , source=sources)
+# lib<plugin>.<arch>-<simulator|iphone>.<release|debug|release_debug>.a
+library_name = env['plugin'] + "." + env["arch"] + "-" + ("simulator" if env["simulator"] else "iphone") + "." + env["target"] + ".a"
+library = env.StaticLibrary(target=env['target_path'] + library_name, source=sources)
 
 Default(library)
 

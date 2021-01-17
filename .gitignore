@@ -2,6 +2,8 @@
 #
 # gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
 
+.DS_Store
+
 ## User settings
 xcuserdata/
 
@@ -28,3 +30,7 @@ DerivedData/
 *.d
 *.o
 *.dblite
+
+## Godot Plugins
+godot_headers/*
+bin/*
