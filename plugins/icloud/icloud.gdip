@@ -1,6 +1,6 @@
 [config]
 name="iCloud"
-binary="icloud_lib.a"
+binary="icloud.a"
 
 initialization="register_icloud_types"
 deinitialization="unregister_icloud_types"

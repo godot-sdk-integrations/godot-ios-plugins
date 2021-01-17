@@ -27,10 +27,6 @@ opts.Add(PathVariable('target_path', 'The path where the lib is installed.', 'bi
 opts.Add(EnumVariable('plugin', 'Plugin to build', '', ['', 'arkit', 'camera', 'icloud', 'gamecenter', 'inappstore']))
 opts.Add(EnumVariable('version', 'Godot version to target', '', ['', '3.2', '4.0']))
 
-# Local dependency paths, adapt them to your setup
-godot_path = "godot/"
-godot_library = "ios.fat.a"
-
 # Updates the environment with the option variables.
 opts.Update(env)
 
@@ -94,6 +90,9 @@ env.Prepend(CXXFLAGS=[
 ])
 env.Append(LINKFLAGS=["-arch", env['arch'], '-isysroot', sdk_path, '-F' + sdk_path])
 
+if env['arch'] == 'armv7':
+    env.Prepend(CXXFLAGS=['-fno-aligned-allocation'])
+
 if env['version'] == '3.2':
     env.Prepend(CFLAGS=['-std=gnu11'])
     env.Prepend(CXXFLAGS=['-DGLES_ENABLED', '-std=gnu++14'])
@@ -106,16 +105,22 @@ if env['version'] == '3.2':
             '-DPTRCALL_ENABLED',
         ])
     elif env['target'] == 'release_debug':
-        env.Prepend(CXXFLAGS=['-O2', '-ftree-vectorize', '-fomit-frame-pointer', 
+        env.Prepend(CXXFLAGS=['-O2', '-ftree-vectorize',
             '-DNDEBUG', '-DNS_BLOCK_ASSERTIONS=1', '-DDEBUG_ENABLED', 
             '-DPTRCALL_ENABLED',
         ])
+
+        if env['arch'] != 'armv7':
+            env.Prepend(CXXFLAGS=['-fomit-frame-pointer'])
     else:
         env.Prepend(CXXFLAGS=[
-            '-O2', '-ftree-vectorize', '-fomit-frame-pointer', 
+            '-O2', '-ftree-vectorize',
             '-DNDEBUG', '-DNS_BLOCK_ASSERTIONS=1', 
             '-DPTRCALL_ENABLED',
         ])
+
+        if env['arch'] != 'armv7':
+            env.Prepend(CXXFLAGS=['-fomit-frame-pointer'])
 elif env['version'] == '4.0':
     env.Prepend(CFLAGS=['-std=gnu11'])
     env.Prepend(CXXFLAGS=['-DVULKAN_ENABLED', '-std=gnu++17'])
@@ -128,14 +133,20 @@ elif env['version'] == '4.0':
         ])
     elif env['target'] == 'release_debug':
         env.Prepend(CXXFLAGS=[
-            '-O2', '-ftree-vectorize', '-fomit-frame-pointer', 
+            '-O2', '-ftree-vectorize',
             '-DNDEBUG', '-DNS_BLOCK_ASSERTIONS=1', '-DDEBUG_ENABLED',
         ])
+
+        if env['arch'] != 'armv7':
+            env.Prepend(CXXFLAGS=['-fomit-frame-pointer'])
     else:
         env.Prepend(CXXFLAGS=[
-            '-O2', '-ftree-vectorize', '-fomit-frame-pointer',
+            '-O2', '-ftree-vectorize',
             '-DNDEBUG', '-DNS_BLOCK_ASSERTIONS=1',
         ])
+
+        if env['arch'] != 'armv7':
+            env.Prepend(CXXFLAGS=['-fomit-frame-pointer'])            
 else:
     print("No valid version to set flags for.")
     quit();
@@ -143,23 +154,23 @@ else:
 # Adding header files
 env.Append(CPPPATH=[
     '.', 
-    'godot_headers', 
-    'godot_headers/main', 
-    'godot_headers/core', 
-    'godot_headers/core/os', 
-    'godot_headers/core/platform',
-    'godot_headers/platform/iphone',
-    'godot_headers/modules',
-    'godot_headers/scene',
-    'godot_headers/servers',
-    'godot_headers/drivers',
-    'godot_headers/thirdparty',
+    'godot', 
+    'godot/main', 
+    'godot/core', 
+    'godot/core/os', 
+    'godot/core/platform',
+    'godot/platform/iphone',
+    'godot/modules',
+    'godot/scene',
+    'godot/servers',
+    'godot/drivers',
+    'godot/thirdparty',
 ])
 
 # tweak this if you want to use different folders, or more folders, to store your source code in.
-sources = Glob(env['plugin'] + '/*.cpp')
-sources.append(Glob(env['plugin'] + '/*.mm'))
-sources.append(Glob(env['plugin'] + '/*.m'))
+sources = Glob('plugins/' + env['plugin'] + '/*.cpp')
+sources.append(Glob('plugins/' + env['plugin'] + '/*.mm'))
+sources.append(Glob('plugins/' + env['plugin'] + '/*.m'))
 
 # lib<plugin>.<arch>-<simulator|iphone>.<release|debug|release_debug>.a
 library_platform = env["arch"] + "-" + ("simulator" if env["simulator"] else "iphone")

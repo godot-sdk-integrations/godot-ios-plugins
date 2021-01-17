@@ -1,6 +1,6 @@
 [config]
 name="ARKit"
-binary="arkit_lib.a"
+binary="arkit.a"
 
 initialization="register_arkit_types"
 deinitialization="unregister_arkit_types"

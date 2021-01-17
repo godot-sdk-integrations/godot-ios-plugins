@@ -1,6 +1,6 @@
 [config]
 name="GameCenter"
-binary="gamecenter_lib.a"
+binary="gamecenter.a"
 
 initialization="register_gamecenter_types"
 deinitialization="unregister_gamecenter_types"
