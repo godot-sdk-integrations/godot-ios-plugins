@@ -38,19 +38,24 @@ mkdir ./bin/release
 # Move GameCenter
 mkdir ./bin/release/gamecenter
 mv ./bin/gamecenter.{release,debug}.xcframework ./bin/release/gamecenter
+cp ./plugins/gamecenter/gamecenter.gdip ./bin/release/gamecenter
 
 # Move InAppStore
 mkdir ./bin/release/icloud
 mv ./bin/icloud.{release,debug}.xcframework ./bin/release/icloud
+cp ./plugins/icloud/icloud.gdip ./bin/release/icloud
 
 # Move InAppStore
 mkdir ./bin/release/inappstore
 mv ./bin/inappstore.{release,debug}.xcframework ./bin/release/inappstore
+cp ./plugins/inappstore/inappstore.gdip ./bin/release/inappstore
 
 # Move Camera
 mkdir ./bin/release/camera
 mv ./bin/camera.{release,debug}.xcframework ./bin/release/camera
+cp ./plugins/camera/camera.gdip ./bin/release/camera
 
 # Move ARKit
 mkdir ./bin/release/arkit
 mv ./bin/arkit.{release,debug}.xcframework ./bin/release/arkit
+cp ./plugins/arkit/arkit.gdip ./bin/release/arkit
