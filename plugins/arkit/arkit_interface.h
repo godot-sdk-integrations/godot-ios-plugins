@@ -52,7 +52,7 @@ typedef ARVRPositionalTracker GodotARTracker;
 
 typedef PoolVector<uint8_t> GodotUInt8Vector;
 
-#define GODOT_ARKIT_OVERRIDE 
+#define GODOT_ARKIT_OVERRIDE
 #endif
 
 #include "servers/camera/camera_feed.h"

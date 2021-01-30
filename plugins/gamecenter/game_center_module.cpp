@@ -34,7 +34,7 @@
 
 #if VERSION_MAJOR == 4
 #include "core/config/engine.h"
-#else 
+#else
 #include "core/engine.h"
 #endif
 

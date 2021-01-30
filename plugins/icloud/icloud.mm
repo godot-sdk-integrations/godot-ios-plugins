@@ -85,13 +85,13 @@ Variant nsobject_to_variant(NSObject *object) {
 		if ([data length] > 0) {
 			ret.resize([data length]);
 			{
-				#if VERSION_MAJOR == 4
+#if VERSION_MAJOR == 4
 				// PackedByteArray::Write w = ret.write();
 				copymem((void *)ret.ptr(), [data bytes], [data length]);
-				#else
+#else
 				GodotByteArray::Write w = ret.write();
 				copymem(w.ptr(), [data bytes], [data length]);
-				#endif
+#endif
 			}
 		}
 		return ret;
@@ -193,13 +193,13 @@ NSObject *variant_to_nsobject(Variant v) {
 		GodotByteArray arr = v;
 		NSData *result;
 
-		#if VERSION_MAJOR == 4
+#if VERSION_MAJOR == 4
 		result = [NSData dataWithBytes:arr.ptr() length:arr.size()];
-		#else
+#else
 		GodotByteArray::Read r = arr.read();
 		result = [NSData dataWithBytes:r.ptr() length:arr.size()];
-		#endif
-		
+#endif
+
 		return result;
 	}
 	WARN_PRINT(String("Could not add unsupported type to iCloud: '" + Variant::get_type_name(v.get_type()) + "'").utf8().get_data());

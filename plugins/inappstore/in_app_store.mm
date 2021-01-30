@@ -236,20 +236,31 @@ InAppStore *InAppStore::instance = NULL;
 }
 
 - (void)paymentQueue:(SKPaymentQueue *)queue updatedTransactions:(NSArray *)transactions {
-
 	printf("transactions updated!\n");
 	for (SKPaymentTransaction *transaction in transactions) {
+
+		String pid;
+		Dictionary ret;
+
+		if (transaction.payment.productIdentifier.length > 0) {
+			pid = String::utf8([transaction.payment.productIdentifier UTF8String]);
+		} else {
+			pid = "";
+		}
+
+		ret["product_id"] = pid;
+		ret["type_code"] = (int)transaction.transactionState;
 
 		switch (transaction.transactionState) {
 			case SKPaymentTransactionStatePurchased: {
 				printf("status purchased!\n");
-				String pid = String::utf8([transaction.payment.productIdentifier UTF8String]);
+
 				String transactionId = String::utf8([transaction.transactionIdentifier UTF8String]);
 				InAppStore::get_singleton()->_record_purchase(pid);
-				Dictionary ret;
+
 				ret["type"] = "purchase";
 				ret["result"] = "ok";
-				ret["product_id"] = pid;
+
 				ret["transaction_id"] = transactionId;
 
 				NSData *receipt = nil;
@@ -272,41 +283,42 @@ InAppStore *InAppStore::instance = NULL;
 				receipt_ret["sdk"] = sdk_version;
 				ret["receipt"] = receipt_ret;
 
-				InAppStore::get_singleton()->_post_event(ret);
-
 				if (self.shouldAutoFinishTransactions) {
 					[[SKPaymentQueue defaultQueue] finishTransaction:transaction];
 				} else {
 					self.pendingTransactions[transaction.payment.productIdentifier] = transaction;
 				}
-
 			} break;
 			case SKPaymentTransactionStateFailed: {
 				printf("status transaction failed!\n");
-				String pid = String::utf8([transaction.payment.productIdentifier UTF8String]);
-				Dictionary ret;
 				ret["type"] = "purchase";
 				ret["result"] = "error";
-				ret["product_id"] = pid;
 				ret["error"] = String::utf8([transaction.error.localizedDescription UTF8String]);
-				InAppStore::get_singleton()->_post_event(ret);
 				[[SKPaymentQueue defaultQueue] finishTransaction:transaction];
 			} break;
 			case SKPaymentTransactionStateRestored: {
 				printf("status transaction restored!\n");
-				String pid = String::utf8([transaction.originalTransaction.payment.productIdentifier UTF8String]);
 				InAppStore::get_singleton()->_record_purchase(pid);
-				Dictionary ret;
 				ret["type"] = "restore";
 				ret["result"] = "ok";
-				ret["product_id"] = pid;
-				InAppStore::get_singleton()->_post_event(ret);
 				[[SKPaymentQueue defaultQueue] finishTransaction:transaction];
 			} break;
+			case SKPaymentTransactionStatePurchasing: {
+				ret["type"] = "purchase";
+				ret["result"] = "progress";
+			} break;
+			case SKPaymentTransactionStateDeferred: {
+				ret["type"] = "purchase";
+				ret["result"] = "progress";
+			} break;
 			default: {
-				printf("status default %i!\n", (int)transaction.transactionState);
+				ret["type"] = "purchase";
+				ret["result"] = "unhandled";
+				printf("Transaction is unhandled. Transaction state: %i!\n", (int)transaction.transactionState);
 			} break;
 		}
+
+		InAppStore::get_singleton()->_post_event(ret);
 	}
 }
 

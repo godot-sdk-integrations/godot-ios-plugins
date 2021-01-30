@@ -179,13 +179,13 @@ typedef PoolVector<uint8_t> GodotUInt8Vector;
 				img_data[0].resize(new_width * new_height);
 			}
 
-			#if VERSION_MAJOR == 4
+#if VERSION_MAJOR == 4
 			uint8_t *w = img_data[0].ptrw();
 			memcpy(w, dataY, new_width * new_height);
-			#else
+#else
 			GodotUInt8Vector::Write w = img_data[0].write();
 			memcpy(w.ptr(), dataY, new_width * new_height);
-			#endif
+#endif
 
 			img[0].instance();
 			img[0]->create(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
@@ -202,13 +202,13 @@ typedef PoolVector<uint8_t> GodotUInt8Vector;
 				img_data[1].resize(2 * new_width * new_height);
 			}
 
-			#if VERSION_MAJOR == 4
+#if VERSION_MAJOR == 4
 			uint8_t *w = img_data[1].ptrw();
 			memcpy(w, dataCbCr, 2 * new_width * new_height);
-			#else
+#else
 			GodotUInt8Vector::Write w = img_data[1].write();
 			memcpy(w.ptr(), dataCbCr, 2 * new_width * new_height);
-			#endif
+#endif
 
 			///TODO GLES2 doesn't support FORMAT_RG8, need to do some form of conversion
 			img[1].instance();

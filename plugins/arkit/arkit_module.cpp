@@ -30,8 +30,8 @@
 
 #include "arkit_module.h"
 
-#include "core/version.h"
 #include "arkit_interface.h"
+#include "core/version.h"
 
 void register_arkit_types() {
 	// does it make sense to register the class?
@@ -39,11 +39,11 @@ void register_arkit_types() {
 	Ref<ARKitInterface> arkit_interface;
 	arkit_interface.instance();
 
-	#if VERSION_MAJOR == 4
+#if VERSION_MAJOR == 4
 	XRServer::get_singleton()->add_interface(arkit_interface);
-	#else
+#else
 	ARVRServer::get_singleton()->add_interface(arkit_interface);
-	#endif
+#endif
 }
 
 void unregister_arkit_types() {
