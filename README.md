@@ -1,5 +1,7 @@
 # Godot iOS plugins
 
+`master` branch is current development branch and can introduce breaking changes to plugin's public interface. 
+`3.2` branch aim is to provide same public interface as it was before switch to new iOS plugin system. 
 
 ## Instructions
 
