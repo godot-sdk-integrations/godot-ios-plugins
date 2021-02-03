@@ -54,7 +54,7 @@ void APNPlugin::_bind_methods() {
 }
 
 void APNPlugin::register_push_notifications(PushOptions options) {
-	UNAuthorizationOptions notificationsOptions = 0;
+	UNAuthorizationOptions notificationsOptions = UNAuthorizationOptionNone;
 
 	if (options & PUSH_ALERT) {
 		notificationsOptions |= UNAuthorizationOptionAlert;

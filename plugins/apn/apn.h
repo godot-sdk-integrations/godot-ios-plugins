@@ -40,9 +40,9 @@ class APNPlugin : public Object {
 
 public:
 	enum PushOptions {
-		PUSH_ALERT = 1,
-		PUSH_BADGE,
-		PUSH_SOUND
+		PUSH_ALERT = 1 << 0,
+		PUSH_BADGE = 1 << 1,
+		PUSH_SOUND = 1 << 2,
 	};
 
 	static APNPlugin *get_singleton();
