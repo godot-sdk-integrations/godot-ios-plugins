@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2021-02-03
+
+## Added
+
+- `PushNotifications` plugin that enables Apple Remote Notifications support for Godot projects.
+
 ## 2021-01-31
 
 ## Fixes

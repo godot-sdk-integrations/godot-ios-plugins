@@ -1,5 +1,5 @@
 [config]
-name="Push Notifications"
+name="PushNotifications"
 binary="apn.xcframework"
 
 initialization="godot_apn_init"
@@ -14,6 +14,6 @@ capabilities=[]
 
 files=[]
 
-# linker_flags=["-ObjC"]
+linker_flags=["-ObjC"]
 
 [plist]
