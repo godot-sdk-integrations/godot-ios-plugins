@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 GODOT_PLUGINS="gamecenter inappstore icloud camera arkit apn"
 
