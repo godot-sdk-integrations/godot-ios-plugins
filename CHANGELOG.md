@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2021-02-05
+
+## Added
+
+- `badge_number` property, `set_badge_number`, `get_badge_number` methods to `PushNotifications` plugin.
+- `GodotUserNotificationDelegate` and `UserNotificationService` can be used by as a single interface to process incoming notifications (both remote and local).
+
 ## 2021-02-03
 
 ## Added

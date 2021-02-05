@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  apn_implementation.mm                                                */
+/*  godot_user_notification_delegate.h                                   */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,61 +28,16 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#import "apn_implementation.h"
+#import <UserNotifications/UserNotifications.h>
 
-#include "apn.h"
+typedef NSObject<UNUserNotificationCenterDelegate> UserNotificationService;
 
-#import "platform/iphone/godot_app_delegate.h"
+@interface GodotUserNotificationDelegate : NSObject <UNUserNotificationCenterDelegate>
 
-struct APNSInitializer {
+@property(class, readonly, strong) NSArray<UserNotificationService *> *services;
 
-	APNSInitializer() {
-		[GodotApplicalitionDelegate addService:[GodotAPNAppDelegate shared]];
-	}
-};
-static APNSInitializer initializer;
++ (instancetype)shared;
 
-@interface GodotAPNAppDelegate ()
-
-@end
-
-@implementation GodotAPNAppDelegate
-
-- (instancetype)init {
-	self = [super init];
-
-	return self;
-}
-
-+ (instancetype)shared {
-	static GodotAPNAppDelegate *sharedInstance = nil;
-	static dispatch_once_t onceToken;
-	dispatch_once(&onceToken, ^{
-		sharedInstance = [[GodotAPNAppDelegate alloc] init];
-	});
-	return sharedInstance;
-}
-
-- (void)registerPushNotificationsWithOptions:(UNAuthorizationOptions)options {
-	[UNUserNotificationCenter.currentNotificationCenter requestAuthorizationWithOptions:options
-																	  completionHandler:^(BOOL granted, NSError *_Nullable error) {
-																		  NSLog(@"Push notifications access: %@, error: %@", @(granted), error);
-																	  }];
-	[UIApplication.sharedApplication registerForRemoteNotifications];
-}
-
-- (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
-	const char *data = (const char *)[deviceToken bytes];
-	NSMutableString *token = [NSMutableString string];
-
-	for (NSUInteger i = 0; i < [deviceToken length]; i++) {
-		[token appendFormat:@"%02.2hhX", data[i]];
-	}
-
-	String device_token;
-	device_token.parse_utf8([[token copy] UTF8String]);
-
-	APNPlugin::get_singleton()->update_device_token(device_token);
-}
++ (void)addService:(UserNotificationService *)service;
 
 @end
