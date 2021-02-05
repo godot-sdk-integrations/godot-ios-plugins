@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  apn.h                                                                */
+/*  godot_apn_delegate.h                                                 */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -28,36 +28,12 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef godot_apn_implementation_h
-#define godot_apn_implementation_h
+#import <UIKit/UIKit.h>
+#import <UserNotifications/UserNotifications.h>
 
-#include "core/object.h"
+@interface GodotAPNAppDelegate : NSObject <UIApplicationDelegate>
 
-class APNPlugin : public Object {
-	GDCLASS(APNPlugin, Object);
++ (instancetype)shared;
+- (void)registerPushNotificationsWithOptions:(UNAuthorizationOptions)options;
 
-	static void _bind_methods();
-
-public:
-	enum PushOptions {
-		PUSH_ALERT = 1 << 0,
-		PUSH_BADGE = 1 << 1,
-		PUSH_SOUND = 1 << 2,
-		PUSH_SETTINGS = 1 << 3,
-	};
-
-	static APNPlugin *get_singleton();
-
-	void register_push_notifications(PushOptions options);
-	void update_device_token(String token);
-
-	void set_badge_number(int value);
-	int get_badge_number();
-
-	APNPlugin();
-	~APNPlugin();
-};
-
-VARIANT_ENUM_CAST(APNPlugin::PushOptions)
-
-#endif /* godot_apn_implementation_h */
+@end
