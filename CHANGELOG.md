@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2021-03-19
+
+## Fixes
+
+- `GameCenter` plugin now returns correct `player_id` value for iOS versions  between 13.0 and 13.5.
+
 ## 2021-02-05
 
 ## Added

@@ -348,7 +348,7 @@ Error GameCenter::request_identity_verification_signature() {
 		};
 
 		pending_events.push_back(ret);
-	}];
+	};
 
 	if (@available(iOS 13.5, *)) {
 		[player fetchItemsForIdentityVerificationSignature:verificationSignatureHandler];
