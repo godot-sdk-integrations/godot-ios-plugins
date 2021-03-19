@@ -327,7 +327,7 @@ Error GameCenter::request_identity_verification_signature() {
 	ERR_FAIL_COND_V(!is_authenticated(), ERR_UNAUTHORIZED);
 
 	GKLocalPlayer *player = [GKLocalPlayer localPlayer];
-	[player generateIdentityVerificationSignatureWithCompletionHandler:^(NSURL *publicKeyUrl, NSData *signature, NSData *salt, uint64_t timestamp, NSError *error) {
+	void (^verificationSignatureHandler)(NSURL *publicKeyUrl, NSData *signature, NSData *salt, uint64_t timestamp, NSError *error) = ^(NSURL *publicKeyUrl, NSData *signature, NSData *salt, uint64_t timestamp, NSError *error) {
 		Dictionary ret;
 		ret["type"] = "identity_verification_signature";
 		if (error == nil) {
@@ -336,7 +336,7 @@ Error GameCenter::request_identity_verification_signature() {
 			ret["signature"] = [[signature base64EncodedStringWithOptions:0] UTF8String];
 			ret["salt"] = [[salt base64EncodedStringWithOptions:0] UTF8String];
 			ret["timestamp"] = timestamp;
-			if (@available(iOS 13, *)) {
+			if (@available(iOS 13.5, *)) {
 				ret["player_id"] = [player.teamPlayerID UTF8String];
 			} else {
 				ret["player_id"] = [player.playerID UTF8String];
@@ -348,7 +348,13 @@ Error GameCenter::request_identity_verification_signature() {
 		};
 
 		pending_events.push_back(ret);
-	}];
+	};
+
+	if (@available(iOS 13.5, *)) {
+		[player fetchItemsForIdentityVerificationSignature:verificationSignatureHandler];
+	} else {
+		[player generateIdentityVerificationSignatureWithCompletionHandler:verificationSignatureHandler];
+	}
 
 	return OK;
 };
