@@ -33,7 +33,7 @@
 
 * Running
   ```
-  scons target=<debug|release|release_debug> arch=<arch> simulator=<no|yes> plugin=<plugin_name> version=<3.2|4.0>
+  scons target=<debug|release|release_debug> arch=<arch> simulator=<no|yes> plugin=<plugin_name> version=<3.3|4.0>
   ```
   will generate `.a` static library for chosen target.  
   Do note, that Godot's default `debug` export template is compiled with `release_debug` target.
