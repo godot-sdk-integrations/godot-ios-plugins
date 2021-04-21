@@ -231,6 +231,15 @@ InAppStore *InAppStore::instance = NULL;
 	self.pendingTransactions[productID] = nil;
 }
 
+- (BOOL)paymentQueue:(SKPaymentQueue *)queue shouldAddStorePayment:(SKPayment *)payment forProduct:(SKProduct *)product {
+	Dictionary ret;
+	ret["type"] = "purchase_deferred";
+	ret["result"] = "ok";
+	ret["product_id"] = String::utf8([payment.productIdentifier UTF8String]);
+	InAppStore::get_singleton()->_post_event(ret);
+	return false;
+}
+
 - (void)reset {
 	[self.pendingTransactions removeAllObjects];
 }
