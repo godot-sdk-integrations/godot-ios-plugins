@@ -1,0 +1,17 @@
+[config]
+name="StoreReviewController"
+binary="storereviewcontroller.xcframework"
+
+initialization="register_storereviewcontroller_types"
+deinitialization="unregister_storereviewcontroller_types"
+
+[dependencies]
+linked=[]
+embedded=[]
+system=["StoreKit.framework"]
+
+capabilities=[]
+
+files=[]
+
+[plist]
