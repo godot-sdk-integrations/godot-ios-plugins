@@ -298,9 +298,31 @@ InAppStore *InAppStore::instance = NULL;
 			} break;
 			case SKPaymentTransactionStateRestored: {
 				printf("status transaction restored!\n");
+				String transactionId = String::utf8([transaction.transactionIdentifier UTF8String]);
 				InAppStore::get_singleton()->_record_purchase(pid);
 				ret["type"] = "restore";
 				ret["result"] = "ok";
+				ret["transaction_id"] = transactionId;
+
+				NSData *receipt = nil;
+				int sdk_version = [[[UIDevice currentDevice] systemVersion] intValue];
+
+				NSBundle *bundle = [NSBundle mainBundle];
+				// Get the transaction receipt file path location in the app bundle.
+				NSURL *receiptFileURL = [bundle appStoreReceiptURL];
+
+				// Read in the contents of the transaction file.
+				receipt = [NSData dataWithContentsOfURL:receiptFileURL];
+
+				NSString *receipt_to_send = nil;
+
+				if (receipt != nil) {
+					receipt_to_send = [receipt base64EncodedStringWithOptions:0];
+				}
+				Dictionary receipt_ret;
+				receipt_ret["receipt"] = String::utf8(receipt_to_send != nil ? [receipt_to_send UTF8String] : "");
+				receipt_ret["sdk"] = sdk_version;
+				ret["receipt"] = receipt_ret;
 				[[SKPaymentQueue defaultQueue] finishTransaction:transaction];
 			} break;
 			case SKPaymentTransactionStatePurchasing: {
