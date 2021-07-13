@@ -1,0 +1,19 @@
+[config]
+name="PhotoPicker"
+binary="photo_picker.xcframework"
+
+initialization="godot_photopicker_init"
+deinitialization="godot_photopicker_deinit"
+
+[dependencies]
+linked=[]
+embedded=[]
+system=[]
+
+capabilities=[]
+
+files=[]
+
+[plist]
+NSPhotoLibraryUsageDescription:string_input="Photo Library usage description"
+NSCameraUsageDescription:string_input="Camera usage description"
