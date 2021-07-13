@@ -87,10 +87,10 @@ Variant nsobject_to_variant(NSObject *object) {
 			{
 #if VERSION_MAJOR == 4
 				// PackedByteArray::Write w = ret.write();
-				copymem((void *)ret.ptr(), [data bytes], [data length]);
+				memcpy((void *)ret.ptr(), [data bytes], [data length]);
 #else
 				GodotByteArray::Write w = ret.write();
-				copymem(w.ptr(), [data bytes], [data length]);
+				memcpy(w.ptr(), [data bytes], [data length]);
 #endif
 			}
 		}
