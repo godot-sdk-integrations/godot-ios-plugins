@@ -30,7 +30,7 @@ jobs:
 
       - name: Compile Plugins
         run: |
-          ./scripts/release_xcframework.sh 3.3
+          ./scripts/release_xcframework.sh 3.x
           ls -l bin/release
 
       - uses: actions/upload-artifact@v2
