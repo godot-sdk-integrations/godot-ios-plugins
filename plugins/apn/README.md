@@ -27,8 +27,8 @@ Values: `PUSH_ALERT`, `PUSH_BADGE`, `PUSH_SOUND`, `PUSH_SETTINGS`
 
 ## Methods
 
-`register_push_notifications(PushOptions options)` - Registers device to receive remote notifications through Apple Push Notification service.
-`set_badge_number(int value)` - Sets the badge value of the app icon on the Home screen.
+`register_push_notifications(PushOptions options)` - Registers device to receive remote notifications through Apple Push Notification service.  
+`set_badge_number(int value)` - Sets the badge value of the app icon on the Home screen.  
 `get_badge_number()` - Returns the badge value of the app icon on the Home screen.
 
 ## Properties

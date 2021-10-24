@@ -1,7 +1,7 @@
 # Godot iOS plugins
 
 `master` branch is current development branch and can introduce breaking changes to plugin's public interface. 
-`3.2` branch aim is to provide same public interface as it was before switch to new iOS plugin system. 
+`3.3` branch aim is to provide same public interface as it was before switch to new iOS plugin system. 
 
 ## Instructions
 
@@ -33,7 +33,7 @@
 
 * Running
   ```
-  scons target=<debug|release|release_debug> arch=<arch> simulator=<no|yes> plugin=<plugin_name> version=<3.3|4.0>
+  scons target=<debug|release|release_debug> arch=<arch> simulator=<no|yes> plugin=<plugin_name> version=<3.x|4.0>
   ```
   will generate `.a` static library for chosen target.  
   Do note, that Godot's default `debug` export template is compiled with `release_debug` target.
@@ -49,3 +49,7 @@
 * Run `./scripts/generate_xcframework.sh <plugin_name> <debug|release|release_debug> <godot_version>`  to generate `xcframework` with specific configuration. `xcframework` allows plugin to support both `arm64` device and `arm64` simulator.
 
 * The result `.xcframework` will be stored in `bin` folder as well as intermidiate `.a` binaries.
+
+## Documentation
+
+Each plugin provides a `README.md` file which contains a documentation and examples.
