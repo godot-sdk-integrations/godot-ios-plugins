@@ -24,8 +24,8 @@ opts.Add(EnumVariable('arch', "Compilation Architecture", '', ['', 'arm64', 'arm
 opts.Add(BoolVariable('simulator', "Compilation platform", 'no'))
 opts.Add(BoolVariable('use_llvm', "Use the LLVM / Clang compiler", 'no'))
 opts.Add(PathVariable('target_path', 'The path where the lib is installed.', 'bin/'))
-opts.Add(EnumVariable('plugin', 'Plugin to build', '', ['', 'arkit', 'camera', 'icloud', 'gamecenter', 'inappstore']))
-opts.Add(EnumVariable('version', 'Godot version to target', '', ['', '3.2', '4.0']))
+opts.Add(EnumVariable('plugin', 'Plugin to build', '', ['', 'apn', 'arkit', 'camera', 'icloud', 'gamecenter', 'inappstore']))
+opts.Add(EnumVariable('version', 'Godot version to target', '', ['', '3.3', '4.0']))
 
 # Updates the environment with the option variables.
 opts.Update(env)
@@ -93,7 +93,7 @@ env.Append(LINKFLAGS=["-arch", env['arch'], '-isysroot', sdk_path, '-F' + sdk_pa
 if env['arch'] == 'armv7':
     env.Prepend(CXXFLAGS=['-fno-aligned-allocation'])
 
-if env['version'] == '3.2':
+if env['version'] == '3.3':
     env.Prepend(CFLAGS=['-std=gnu11'])
     env.Prepend(CXXFLAGS=['-DGLES_ENABLED', '-std=gnu++14'])
 
