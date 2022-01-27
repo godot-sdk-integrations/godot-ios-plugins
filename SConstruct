@@ -13,7 +13,7 @@ else:
 
 # Most of the settings are taken from https://github.com/BastiaanOlij/gdnative_cpp_example
 
-opts = Variables([], ARGUMENTS)
+opts = Variable([], ARGUMENTS)
 
 # Gets the standard flags CC, CCX, etc.
 env = DefaultEnvironment()
@@ -27,10 +27,9 @@ opts.Add(BoolVariable('use_llvm', "Use the LLVM / Clang compiler", 'no'))
 opts.Add(PathVariable('target_path', 'The path where the lib is installed.', 'bin/'))
 opts.Add(EnumVariable('plugin', 'Plugin to build', '', ['', 'apn', 'arkit', 'camera', 'icloud', 'gamecenter', 'inappstore', 'photo_picker']))
 opts.Add(EnumVariable('version', 'Godot version to target', '', ['', '3.x', '4.0']))
-opts.Add('sdk_version', 'SDK version ', '10.0')
 
-opts.Add('TOOLCHAIN_PATH', 'path tool chain xcode ', '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain')
-opts.Add("triple", "Triple for tvOS toolchain", ""),
+
+opts.Add('sdk_version', 'SDK version ', '10.0')
 # Updates the environment with the option variables.
 opts.Update(env)
 
@@ -75,17 +74,6 @@ if env['sdk_version'] == '':
 
 # Enable Obj-C modules
 env.Append(CCFLAGS=["-fmodules", "-fcxx-modules"])
-
-##### OTHE FIND SDK
-
-compiler_path = "$TOOLCHAIN_PATH/usr/bin/${triple}"
-s_compiler_path = "$TOOLCHAIN_PATH/Developer/usr/bin/"
-
-env["CC"] = compiler_path + "clang"
-env["CXX"] = compiler_path + "clang++"
-env["S_compiler"] = s_compiler_path + "gcc"
-env["AR"] = compiler_path + "ar"
-env["RANLIB"] = compiler_path + "ranlib"
 
 
 if env['platform'] == 'iphone':
