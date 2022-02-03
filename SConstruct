@@ -88,6 +88,11 @@ if env['platform'] == 'iphone':
 elif env['platform'] == 'tvos' :
     sdk_def_enable = '-DTVOS_ENABLED'
     sdk_def = "TVOSSDK"
+	
+	# tvOS requires Bitcode.
+    env.Append(CCFLAGS=["-fembed-bitcode"])
+    env.Append(LINKFLAGS=["-bitcode_bundle"])
+	
     if env['simulator']:
         sdk_name = 'appletvsimulator'
         flag_version_min = '-mappletvsimulator-version-min='
