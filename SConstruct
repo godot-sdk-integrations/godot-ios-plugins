@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+
+EnsureSConsVersion(0, 98, 1)
+
 import os
 import sys
 import subprocess
@@ -13,7 +16,7 @@ else:
 
 # Most of the settings are taken from https://github.com/BastiaanOlij/gdnative_cpp_example
 
-opts = Variable([], ARGUMENTS)
+opts = Variables([], ARGUMENTS)
 
 # Gets the standard flags CC, CCX, etc.
 env = DefaultEnvironment()
