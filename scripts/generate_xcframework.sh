@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Compile static libraries
+# Compile static libraries_
 
 # ARM64 Device
 scons platform=$4 target=$2 arch=arm64 plugin=$1 version=$3

@@ -3,8 +3,8 @@ set -e
 
 #call ./scripts/releasexcframework.sh iphone 3.x
 #call ./scripts/releasexcframework.sh tvos 3.x
-#call ./scripts/releasexcframework.sh iphone 4.0
-#call ./scripts/releasexcframework.sh tvos 4.0
+#call ./scripts/releasexcframework.sh iphone 4.0 
+#call ./scripts/releasexcframework.sh tvos 4.0 
 
 if [[$1 == "tvos"]] then;
     GODOT_PLUGINS="inappstore icloud"

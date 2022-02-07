@@ -440,6 +440,7 @@ InAppStore::InAppStore() {
 	transactions_observer = [[GodotTransactionsObserver alloc] init];
 
 	[[SKPaymentQueue defaultQueue] addTransactionObserver:transactions_observer];
+	NSLog(@"*** InAppStore init!");
 }
 
 void InAppStore::finish_transaction(String product_id) {
