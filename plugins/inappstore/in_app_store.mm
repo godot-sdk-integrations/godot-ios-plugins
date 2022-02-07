@@ -434,7 +434,6 @@ InAppStore *InAppStore::get_singleton() {
 }
 
 InAppStore::InAppStore() {
-	ERR_FAIL_COND(instance != NULL);
 	instance = this;
 
 	products_request_delegate = [[GodotProductsDelegate alloc] init];
@@ -460,4 +459,6 @@ InAppStore::~InAppStore() {
 	products_request_delegate = nil;
 	[[SKPaymentQueue defaultQueue] removeTransactionObserver:transactions_observer];
 	transactions_observer = nil;
+
+	instance = NULL;
 }
