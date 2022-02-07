@@ -17,8 +17,8 @@ mkdir ./bin/$1
 
 # Compile Plugin 
 for lib in $GODOT_PLUGINS; do
-    ./scripts/generate_xcframework_$1.sh $lib release $2
-    ./scripts/generate_xcframework_$1.sh $lib release_debug $2
+    ./scripts/generate_xcframework.sh $lib release $2 $1
+    ./scripts/generate_xcframework.sh $lib release_debug $2 $1
     mv ./bin/$1/${lib}.release_debug.xcframework ./bin/$1/${lib}.debug.xcframework
 done
 
