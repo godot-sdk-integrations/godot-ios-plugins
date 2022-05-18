@@ -94,6 +94,8 @@ Error GameCenter::authenticate() {
 			ret["type"] = "authentication";
 			if (player.isAuthenticated) {
 				ret["result"] = "ok";
+				ret["alias"] = [player.alias UTF8String];
+				ret["displayName"] = [player.displayName UTF8String];
 
 				if (@available(iOS 13, *)) {
 					ret["player_id"] = [player.teamPlayerID UTF8String];
