@@ -155,16 +155,7 @@ else:
 env.Append(CPPPATH=[
     '.', 
     'godot', 
-    'godot/main', 
-    'godot/core', 
-    'godot/core/os', 
-    'godot/core/platform',
     'godot/platform/iphone',
-    'godot/modules',
-    'godot/scene',
-    'godot/servers',
-    'godot/drivers',
-    'godot/thirdparty',
 ])
 
 # tweak this if you want to use different folders, or more folders, to store your source code in.
