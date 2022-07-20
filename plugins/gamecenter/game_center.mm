@@ -31,8 +31,14 @@
 #include "game_center.h"
 
 #import "game_center_delegate.h"
+
+#if VERSION_MAJOR == 4
+#import "platform/ios/app_delegate.h"
+#import "platform/ios/view_controller.h"
+#else
 #import "platform/iphone/app_delegate.h"
 #import "platform/iphone/view_controller.h"
+#endif
 
 #import <GameKit/GameKit.h>
 

@@ -33,8 +33,13 @@
 #import <Foundation/Foundation.h>
 #import <Photos/Photos.h>
 
+#if VERSION_MAJOR == 4
+#import "platform/ios/app_delegate.h"
+#import "platform/ios/view_controller.h"
+#else
 #import "platform/iphone/app_delegate.h"
 #import "platform/iphone/view_controller.h"
+#endif
 
 PhotoPicker *instance = NULL;
 
@@ -183,12 +188,21 @@ PhotoPicker *instance = NULL;
 			if (data) {
 				Ref<Image> img;
 
+#if VERSION_MAJOR == 4
+				Vector<uint8_t> img_data;
+				img_data.resize(length);
+				uint8_t* w = img_data.ptrw();
+				memcpy(w, data, length);
+
+				img.instantiate();
+#else
 				PoolVector<uint8_t> img_data;
 				img_data.resize(length);
 				PoolVector<uint8_t>::Write w = img_data.write();
 				memcpy(w.ptr(), data, length);
 
 				img.instance();
+#endif
 				img->create(image.size.width * image.scale, image.size.height * image.scale, 0, Image::FORMAT_RGBA8, img_data);
 
 				PhotoPicker::get_singleton()->select_image(img);

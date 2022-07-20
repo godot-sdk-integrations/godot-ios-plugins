@@ -28,7 +28,7 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-///@TODO this is a near duplicate of CameraOSX, we should find a way to combine those to minimize code duplication!!!!
+///@TODO this is a near duplicate of CameraMacOS, we should find a way to combine those to minimize code duplication!!!!
 // If you fix something here, make sure you fix it there as wel!
 
 #include "camera_ios.h"
@@ -182,12 +182,12 @@ typedef PoolVector<uint8_t> GodotUInt8Vector;
 #if VERSION_MAJOR == 4
 			uint8_t *w = img_data[0].ptrw();
 			memcpy(w, dataY, new_width * new_height);
+			img[0].instantiate();
 #else
 			GodotUInt8Vector::Write w = img_data[0].write();
 			memcpy(w.ptr(), dataY, new_width * new_height);
-#endif
-
 			img[0].instance();
+#endif
 			img[0]->create(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
 		}
 
@@ -205,13 +205,14 @@ typedef PoolVector<uint8_t> GodotUInt8Vector;
 #if VERSION_MAJOR == 4
 			uint8_t *w = img_data[1].ptrw();
 			memcpy(w, dataCbCr, 2 * new_width * new_height);
+			img[1].instantiate();
 #else
 			GodotUInt8Vector::Write w = img_data[1].write();
 			memcpy(w.ptr(), dataCbCr, 2 * new_width * new_height);
+			img[1].instance();
 #endif
 
 			///TODO GLES2 doesn't support FORMAT_RG8, need to do some form of conversion
-			img[1].instance();
 			img[1]->create(new_width, new_height, 0, Image::FORMAT_RG8, img_data[1]);
 		}
 
@@ -358,7 +359,7 @@ void CameraFeedIOS::deactivate_feed() {
 MyDeviceNotifications *device_notifications = nil;
 
 //////////////////////////////////////////////////////////////////////////
-// CameraIOS - Subclass for our camera server on iPhone
+// CameraIOS - Subclass for our camera server on iOS
 
 void CameraIOS::update_feeds() {
 	// this way of doing things is deprecated but still works,
@@ -410,7 +411,11 @@ void CameraIOS::update_feeds() {
 
 		if (!found) {
 			Ref<CameraFeedIOS> newfeed;
+#if VERSION_MAJOR == 4
+			newfeed.instantiate();
+#else
 			newfeed.instance();
+#endif
 			newfeed->set_device(device);
 			add_feed(newfeed);
 		}

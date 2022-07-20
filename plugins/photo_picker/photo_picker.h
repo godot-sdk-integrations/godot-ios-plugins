@@ -33,8 +33,13 @@
 
 #include "core/version.h"
 
+#if VERSION_MAJOR == 4
+#include "core/io/image.h"
+#include "core/object/object.h"
+#else
 #include "core/image.h"
 #include "core/object.h"
+#endif
 
 #ifdef __OBJC__
 @class GodotPhotoPicker;

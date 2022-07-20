@@ -30,7 +30,14 @@
 
 #include "photo_picker_module.h"
 
+#include "core/version.h"
+
+#if VERSION_MAJOR == 4
+#include "core/config/engine.h"
+#else
 #include "core/engine.h"
+#endif
+
 #include "core/version.h"
 
 #include "photo_picker.h"

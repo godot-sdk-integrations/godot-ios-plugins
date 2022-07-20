@@ -36,8 +36,16 @@ If you choose this option, you can skip next the step which generates Godot head
 
 - To generate Godot headers, you need to run the compilation command inside the `godot` submodule directory:
 
+### For Godot 3.x:
+
 ```bash
 scons platform=iphone target=debug
+```
+
+### For Godot 4.x:
+
+```bash
+scons platform=ios target=debug
 ```
 
 You don't have to wait for full engine compilation, as header files are generated first.
