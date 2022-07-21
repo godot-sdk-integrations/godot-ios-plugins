@@ -11,8 +11,8 @@ scons target=$2 arch=armv7 plugin=$1 version=$3
 scons target=$2 arch=x86_64 simulator=yes plugin=$1 version=$3
 
 # Creating a fat libraries for device and simulator
-# lib<plugin>.<arch>-<simulator|iphone>.<release|debug|release_debug>.a
+# lib<plugin>.<arch>-<simulator|ios>.<release|debug|release_debug>.a
 lipo -create "./bin/lib$1.x86_64-simulator.$2.a" \
-    "./bin/lib$1.armv7-iphone.$2.a" \
-    "./bin/lib$1.arm64-iphone.$2.a" \
+    "./bin/lib$1.armv7-ios.$2.a" \
+    "./bin/lib$1.arm64-ios.$2.a" \
     -output "./bin/$1.$2.a"

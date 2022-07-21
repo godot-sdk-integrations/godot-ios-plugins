@@ -30,7 +30,11 @@
 
 #include "icloud.h"
 
+#if VERSION_MAJOR == 4
+#import "platform/ios/app_delegate.h"
+#else
 #import "platform/iphone/app_delegate.h"
+#endif
 
 #import <Foundation/Foundation.h>
 

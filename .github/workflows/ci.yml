@@ -26,7 +26,7 @@ jobs:
 
       - name: Generate Headers
         run: |
-          ./scripts/generate_headers.sh || true
+          ./scripts/generate_headers.sh 3.x || true
 
       - name: Compile Plugins
         run: |

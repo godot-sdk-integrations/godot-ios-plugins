@@ -60,7 +60,7 @@ typedef PoolVector<uint8_t> GodotUInt8Vector;
 /**
 	@author Bastiaan Olij <mux213@gmail.com>
 
-	ARKit interface between iPhone and Godot
+	ARKit interface between iOS and Godot
 */
 
 // forward declaration for some needed objects
@@ -142,7 +142,7 @@ public:
 
 	virtual void process() GODOT_ARKIT_OVERRIDE;
 
-	// called by delegate (void * because C++ and Obj-C don't always mix, should really change all platform/iphone/*.cpp files to .mm)
+	// called by delegate (void * because C++ and Obj-C don't always mix, should really change all platform/ios/*.cpp files to .mm)
 	void _add_or_update_anchor(GodotARAnchor *p_anchor);
 	void _remove_anchor(GodotARAnchor *p_anchor);
 

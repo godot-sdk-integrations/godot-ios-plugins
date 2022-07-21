@@ -28,7 +28,13 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
+#include "core/version.h"
+
+#if VERSION_MAJOR == 4
+#import "platform/ios/godot_app_delegate.h"
+#else
 #import "platform/iphone/godot_app_delegate.h"
+#endif
 
 @interface GodotApplicalitionDelegate (PushNotifications)
 

@@ -31,7 +31,13 @@
 #ifndef godot_apn_implementation_h
 #define godot_apn_implementation_h
 
+#include "core/version.h"
+
+#if VERSION_MAJOR == 4
+#include "core/object/class_db.h"
+#else
 #include "core/object.h"
+#endif
 
 class APNPlugin : public Object {
 	GDCLASS(APNPlugin, Object);
