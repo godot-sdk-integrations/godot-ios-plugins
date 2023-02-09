@@ -195,6 +195,7 @@ PhotoPicker *instance = NULL;
 				memcpy(w, data, length);
 
 				img.instantiate();
+				img->set_data(image.size.width * image.scale, image.size.height * image.scale, 0, Image::FORMAT_RGBA8, img_data);
 #else
 				PoolVector<uint8_t> img_data;
 				img_data.resize(length);
@@ -202,8 +203,8 @@ PhotoPicker *instance = NULL;
 				memcpy(w.ptr(), data, length);
 
 				img.instance();
-#endif
 				img->create(image.size.width * image.scale, image.size.height * image.scale, 0, Image::FORMAT_RGBA8, img_data);
+#endif
 
 				PhotoPicker::get_singleton()->select_image(img);
 			}

@@ -183,12 +183,13 @@ typedef PoolVector<uint8_t> GodotUInt8Vector;
 			uint8_t *w = img_data[0].ptrw();
 			memcpy(w, dataY, new_width * new_height);
 			img[0].instantiate();
+			img[0]->set_data(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
 #else
 			GodotUInt8Vector::Write w = img_data[0].write();
 			memcpy(w.ptr(), dataY, new_width * new_height);
 			img[0].instance();
-#endif
 			img[0]->create(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
+#endif
 		}
 
 		{
@@ -202,18 +203,18 @@ typedef PoolVector<uint8_t> GodotUInt8Vector;
 				img_data[1].resize(2 * new_width * new_height);
 			}
 
+			///TODO GLES2 doesn't support FORMAT_RG8, need to do some form of conversion
 #if VERSION_MAJOR == 4
 			uint8_t *w = img_data[1].ptrw();
 			memcpy(w, dataCbCr, 2 * new_width * new_height);
 			img[1].instantiate();
+			img[1]->set_data(new_width, new_height, 0, Image::FORMAT_RG8, img_data[1]);
 #else
 			GodotUInt8Vector::Write w = img_data[1].write();
 			memcpy(w.ptr(), dataCbCr, 2 * new_width * new_height);
 			img[1].instance();
-#endif
-
-			///TODO GLES2 doesn't support FORMAT_RG8, need to do some form of conversion
 			img[1]->create(new_width, new_height, 0, Image::FORMAT_RG8, img_data[1]);
+#endif
 		}
 
 		// set our texture...
