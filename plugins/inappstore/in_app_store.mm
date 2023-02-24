@@ -344,6 +344,21 @@ InAppStore *InAppStore::instance = NULL;
 	}
 }
 
+- (void)paymentQueueRestoreCompletedTransactionsFinished:(SKPaymentQueue *)queue {
+    Dictionary ret;
+    ret["type"] = "restore";
+    ret["result"] = "completed";
+    InAppStore::get_singleton()->_post_event(ret);
+}
+
+- (void)paymentQueue:(SKPaymentQueue *)queue restoreCompletedTransactionsFailedWithError:(NSError *)error {
+    Dictionary ret;
+    ret["type"] = "restore";
+    ret["result"] = "error";
+    ret["error"] = String::utf8([error.localizedDescription UTF8String]);
+    InAppStore::get_singleton()->_post_event(ret);
+}
+
 @end
 
 void InAppStore::_bind_methods() {
