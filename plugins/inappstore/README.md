@@ -10,7 +10,7 @@ var _appstore = null
 func check_events():
     while _appstore.get_pending_event_count() > 0:
         var event = inappstore.pop_pending_event()
-	if event.result=="ok": # other possible values are "progress", "error", "unhandled"
+	if event.result=="ok": # other possible values are "progress", "error", "unhandled", "completed"
 	
 	    # print(event.product_id)
             match event.type:
@@ -21,7 +21,12 @@ func check_events():
 		    # fields: product_id, transaction_id, receipt		
                     ...
                 'restore':
-		    # fields: product_id, transaction_id, receipt		
+                    # fields: product_id, transaction_id, receipt
+                    ...
+                'completed':
+                    # Now the last in-app purchase restore has been sent,
+                    # so if you didn't get any, the user doesn't have
+                    # any purchases to restore.
                     ...
 	
 func _on_Purchase_button_down():
