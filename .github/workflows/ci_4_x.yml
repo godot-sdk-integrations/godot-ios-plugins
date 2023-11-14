@@ -26,11 +26,11 @@ jobs:
 
       - name: Generate Headers
         run: |
-          ./scripts/generate_headers.sh 4.x || true
+          ./scripts/generate_headers.sh 4.0 || true
 
       - name: Compile Plugins
         run: |
-          ./scripts/release_xcframework.sh 4.x
+          ./scripts/release_xcframework.sh 4.0
           ls -l bin/release
 
       - uses: actions/upload-artifact@v2
