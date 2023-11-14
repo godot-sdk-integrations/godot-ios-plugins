@@ -222,7 +222,7 @@ Array ARKitInterface::raycast(Vector2 p_screen_coord) {
 		NSArray<ARHitTestResult *> *results = [ar_session.currentFrame hitTest:point types:ARHitTestResultTypeExistingPlaneUsingExtent];
 
 		for (ARHitTestResult *result in results) {
-			Transform transform;
+			Transform3D transform;
 
 			matrix_float4x4 m44 = result.worldTransform;
 			transform.basis.elements[0].x = m44.columns[0][0];
@@ -374,10 +374,10 @@ Size2 ARKitInterface::get_render_targetsize() {
 	return target_size;
 }
 
-Transform ARKitInterface::get_transform_for_eye(GodotBaseARInterface::Eyes p_eye, const Transform &p_cam_transform) {
+Transform3D ARKitInterface::get_transform_for_eye(GodotBaseARInterface::Eyes p_eye, const Transform3D &p_cam_transform) {
 	GODOT_MAKE_THREAD_SAFE
 
-	Transform transform_for_eye;
+	Transform3D transform_for_eye;
 
 #if VERSION_MAJOR == 4
 	XRServer *ar_server = XRServer::get_singleton();
@@ -403,7 +403,7 @@ Transform ARKitInterface::get_transform_for_eye(GodotBaseARInterface::Eyes p_eye
 	return transform_for_eye;
 }
 
-CameraMatrix ARKitInterface::get_projection_for_eye(GodotBaseARInterface::Eyes p_eye, real_t p_aspect, real_t p_z_near, real_t p_z_far) {
+Projection ARKitInterface::get_projection_for_eye(GodotBaseARInterface::Eyes p_eye, real_t p_aspect, real_t p_z_near, real_t p_z_far) {
 	// Remember our near and far, it will be used in process when we obtain our projection from our ARKit session.
 	z_near = p_z_near;
 	z_far = p_z_far;

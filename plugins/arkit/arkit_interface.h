@@ -83,8 +83,8 @@ private:
 	real_t ambient_intensity;
 	real_t ambient_color_temperature;
 
-	Transform transform;
-	CameraMatrix projection;
+	Transform3D transform;
+	Projection projection;
 	float eye_height, z_near, z_far;
 
 	Ref<CameraFeed> feed;
@@ -136,8 +136,8 @@ public:
 
 	virtual Size2 get_render_targetsize() GODOT_ARKIT_OVERRIDE;
 	virtual bool is_stereo() GODOT_ARKIT_OVERRIDE;
-	virtual Transform get_transform_for_eye(GodotBaseARInterface::Eyes p_eye, const Transform &p_cam_transform) GODOT_ARKIT_OVERRIDE;
-	virtual CameraMatrix get_projection_for_eye(GodotBaseARInterface::Eyes p_eye, real_t p_aspect, real_t p_z_near, real_t p_z_far) GODOT_ARKIT_OVERRIDE;
+	virtual Transform3D get_transform_for_eye(GodotBaseARInterface::Eyes p_eye, const Transform3D &p_cam_transform) GODOT_ARKIT_OVERRIDE;
+	virtual Projection get_projection_for_eye(GodotBaseARInterface::Eyes p_eye, real_t p_aspect, real_t p_z_near, real_t p_z_far) GODOT_ARKIT_OVERRIDE;
 	virtual void commit_for_eye(GodotBaseARInterface::Eyes p_eye, RID p_render_target, const Rect2 &p_screen_rect) GODOT_ARKIT_OVERRIDE;
 
 	virtual void process() GODOT_ARKIT_OVERRIDE;
