@@ -179,7 +179,7 @@ StringName ARKitInterface::get_name() const {
 	return "ARKit";
 }
 
-int ARKitInterface::get_capabilities() const {
+uint32_t ARKitInterface::get_capabilities() const {
 #if VERSION_MAJOR == 4
 	return ARKitInterface::XR_MONO + ARKitInterface::XR_AR;
 #else
@@ -242,10 +242,12 @@ void ARKitInterface::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("raycast", "screen_coord"), &ARKitInterface::raycast);
 }
 
+#if VERSION_MAJOR != 4
 bool ARKitInterface::is_stereo() {
 	// this is a mono device...
 	return false;
 }
+#endif
 
 bool ARKitInterface::is_initialized() const {
 	return initialized;
@@ -281,7 +283,7 @@ bool ARKitInterface::initialize() {
 			ar_session.delegate = ar_delegate;
 
 			// reset our transform
-			transform = Transform();
+			transform = Transform3D();
 
 			// make this our primary interface
 			ar_server->set_primary_interface(this);
@@ -587,10 +589,11 @@ void ARKitInterface::process() {
 
 #if VERSION_MAJOR == 4
               img[0].instantiate();
+              img[0]->initialize_data(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
 #else
               img[0].instance();
+              img[0]->create(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
 #endif
-							img[0]->create(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
 						}
 
 						{
@@ -635,10 +638,11 @@ void ARKitInterface::process() {
 
 #if VERSION_MAJOR == 4
               img[1].instantiate();
+              img[1]->initialize_data(new_width, new_height, 0, Image::FORMAT_RG8, img_data[1]);
 #else
               img[1].instance();
+              img[1]->create(new_width, new_height, 0, Image::FORMAT_RG8, img_data[1]);
 #endif
-							img[1]->create(new_width, new_height, 0, Image::FORMAT_RG8, img_data[1]);
 						}
 
 						// set our texture...
@@ -740,22 +744,22 @@ void ARKitInterface::process() {
 
 					// copy our current frame projection, investigate using projectionMatrixWithViewportSize:orientation:zNear:zFar: so we can set our own near and far
 					m44 = [camera projectionMatrixForOrientation:orientation viewportSize:CGSizeMake(screen_size.width, screen_size.height) zNear:z_near zFar:z_far];
-					projection.matrix[0][0] = m44.columns[0][0];
-					projection.matrix[1][0] = m44.columns[1][0];
-					projection.matrix[2][0] = m44.columns[2][0];
-					projection.matrix[3][0] = m44.columns[3][0];
-					projection.matrix[0][1] = m44.columns[0][1];
-					projection.matrix[1][1] = m44.columns[1][1];
-					projection.matrix[2][1] = m44.columns[2][1];
-					projection.matrix[3][1] = m44.columns[3][1];
-					projection.matrix[0][2] = m44.columns[0][2];
-					projection.matrix[1][2] = m44.columns[1][2];
-					projection.matrix[2][2] = m44.columns[2][2];
-					projection.matrix[3][2] = m44.columns[3][2];
-					projection.matrix[0][3] = m44.columns[0][3];
-					projection.matrix[1][3] = m44.columns[1][3];
-					projection.matrix[2][3] = m44.columns[2][3];
-					projection.matrix[3][3] = m44.columns[3][3];
+					projection.columns[0][0] = m44.columns[0][0];
+					projection.columns[1][0] = m44.columns[1][0];
+					projection.columns[2][0] = m44.columns[2][0];
+					projection.columns[3][0] = m44.columns[3][0];
+					projection.columns[0][1] = m44.columns[0][1];
+					projection.columns[1][1] = m44.columns[1][1];
+					projection.columns[2][1] = m44.columns[2][1];
+					projection.columns[3][1] = m44.columns[3][1];
+					projection.columns[0][2] = m44.columns[0][2];
+					projection.columns[1][2] = m44.columns[1][2];
+					projection.columns[2][2] = m44.columns[2][2];
+					projection.columns[3][2] = m44.columns[3][2];
+					projection.columns[0][3] = m44.columns[0][3];
+					projection.columns[1][3] = m44.columns[1][3];
+					projection.columns[2][3] = m44.columns[2][3];
+					projection.columns[3][3] = m44.columns[3][3];
 				}
 			}
 		}
