@@ -112,10 +112,6 @@ public:
 	void start_session();
 	void stop_session();
 
-	bool get_anchor_detection_is_enabled() const GODOT_ARKIT_OVERRIDE;
-	void set_anchor_detection_is_enabled(bool p_enable) GODOT_ARKIT_OVERRIDE;
-	virtual int get_camera_feed_id() GODOT_ARKIT_OVERRIDE;
-
 	bool get_light_estimation_is_enabled() const;
 	void set_light_estimation_is_enabled(bool p_enable);
 
@@ -152,13 +148,14 @@ public:
   virtual Transform3D get_camera_transform() GODOT_ARKIT_OVERRIDE;
 	virtual Transform3D get_transform_for_view(uint32_t p_view, const Transform3D &p_cam_transform) GODOT_ARKIT_OVERRIDE;
 	virtual Projection get_projection_for_view(uint32_t p_view, double p_aspect, double p_z_near, double p_z_far) GODOT_ARKIT_OVERRIDE;
+
   virtual RID get_vrs_texture() GODOT_ARKIT_OVERRIDE;
 	virtual RID get_color_texture() GODOT_ARKIT_OVERRIDE;
 	virtual RID get_depth_texture() GODOT_ARKIT_OVERRIDE;
 	virtual RID get_velocity_texture() GODOT_ARKIT_OVERRIDE;
 
 	virtual void process() GODOT_ARKIT_OVERRIDE;
-  virtual void pre_render(){} GODOT_ARKIT_OVERRIDE;
+  virtual void pre_render() GODOT_ARKIT_OVERRIDE;
 	virtual bool pre_draw_viewport(RID p_render_target) GODOT_ARKIT_OVERRIDE;
 	virtual Vector<BlitToScreen> post_draw_viewport(RID p_render_target, const Rect2 &p_screen_rect) GODOT_ARKIT_OVERRIDE;
 	virtual void end_frame() GODOT_ARKIT_OVERRIDE;
