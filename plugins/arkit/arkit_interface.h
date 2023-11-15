@@ -125,20 +125,18 @@ public:
 	/* while Godot has its own raycast logic this takes ARKits camera into account and hits on any ARAnchor */
 	Array raycast(Vector2 p_screen_coord);
 
-	virtual void notification(int p_what) GODOT_ARKIT_OVERRIDE;
-
 	virtual StringName get_name() const GODOT_ARKIT_OVERRIDE;
-	virtual int get_capabilities() const GODOT_ARKIT_OVERRIDE;
+	virtual uint32_t get_capabilities() const GODOT_ARKIT_OVERRIDE;
 
 	virtual bool is_initialized() const GODOT_ARKIT_OVERRIDE;
 	virtual bool initialize() GODOT_ARKIT_OVERRIDE;
 	virtual void uninitialize() GODOT_ARKIT_OVERRIDE;
 
-	virtual Size2 get_render_targetsize() GODOT_ARKIT_OVERRIDE;
-	virtual bool is_stereo() GODOT_ARKIT_OVERRIDE;
-	virtual Transform3D get_transform_for_eye(GodotBaseARInterface::Eyes p_eye, const Transform3D &p_cam_transform) GODOT_ARKIT_OVERRIDE;
-	virtual Projection get_projection_for_eye(GodotBaseARInterface::Eyes p_eye, real_t p_aspect, real_t p_z_near, real_t p_z_far) GODOT_ARKIT_OVERRIDE;
-	virtual void commit_for_eye(GodotBaseARInterface::Eyes p_eye, RID p_render_target, const Rect2 &p_screen_rect) GODOT_ARKIT_OVERRIDE;
+	virtual Size2 get_render_target_size() GODOT_ARKIT_OVERRIDE;
+	virtual uint32_t get_view_count() GODOT_ARKIT_OVERRIDE;
+  virtual Transform3D get_camera_transform() GODOT_ARKIT_OVERRIDE;
+	virtual Transform3D get_transform_for_view(uint32_t p_view, const Transform3D &p_cam_transform) GODOT_ARKIT_OVERRIDE;
+	virtual Projection get_projection_for_view(uint32_t p_view, double p_aspect, double p_z_near, double p_z_far) GODOT_ARKIT_OVERRIDE;
 
 	virtual void process() GODOT_ARKIT_OVERRIDE;
 
