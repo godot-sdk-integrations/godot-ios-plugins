@@ -92,6 +92,10 @@ private:
 	size_t image_height[2];
 	GodotUInt8Vector img_data[2];
 
+#if VERSION_MAJOR == 4
+  XRInterface::TrackingStatus tracking_state;
+#endif
+
 	struct anchor_map {
 		GodotARTracker *tracker;
 		unsigned char uuid[16];
