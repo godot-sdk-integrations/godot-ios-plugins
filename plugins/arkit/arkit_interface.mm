@@ -129,25 +129,6 @@ void ARKitInterface::stop_session() {
 	}
 }
 
-void ARKitInterface::notification(int p_what) {
-	// TODO, this is not being called, need to find out why, possibly because this is not a node.
-	// in that case we need to find a way to get these notifications!
-	switch (p_what) {
-		case GODOT_FOCUS_IN_NOTIFICATION: {
-			print_line("Focus in");
-
-			start_session();
-		}; break;
-		case GODOT_FOCUS_OUT_NOTIFICATION: {
-			print_line("Focus out");
-
-			stop_session();
-		}; break;
-		default:
-			break;
-	}
-}
-
 bool ARKitInterface::get_anchor_detection_is_enabled() const {
 	return plane_detection_is_enabled;
 }
@@ -225,15 +206,15 @@ Array ARKitInterface::raycast(Vector2 p_screen_coord) {
 			Transform3D transform;
 
 			matrix_float4x4 m44 = result.worldTransform;
-			transform.basis.elements[0].x = m44.columns[0][0];
-			transform.basis.elements[1].x = m44.columns[0][1];
-			transform.basis.elements[2].x = m44.columns[0][2];
-			transform.basis.elements[0].y = m44.columns[1][0];
-			transform.basis.elements[1].y = m44.columns[1][1];
-			transform.basis.elements[2].y = m44.columns[1][2];
-			transform.basis.elements[0].z = m44.columns[2][0];
-			transform.basis.elements[1].z = m44.columns[2][1];
-			transform.basis.elements[2].z = m44.columns[2][2];
+			transform.basis.rows[0].x = m44.columns[0][0];
+			transform.basis.rows[1].x = m44.columns[0][1];
+			transform.basis.rows[2].x = m44.columns[0][2];
+			transform.basis.rows[0].y = m44.columns[1][0];
+			transform.basis.rows[1].y = m44.columns[1][1];
+			transform.basis.rows[2].y = m44.columns[1][2];
+			transform.basis.rows[0].z = m44.columns[2][0];
+			transform.basis.rows[1].z = m44.columns[2][1];
+			transform.basis.rows[2].z = m44.columns[2][2];
 			transform.origin.x = m44.columns[3][0];
 			transform.origin.y = m44.columns[3][1];
 			transform.origin.z = m44.columns[3][2];
@@ -307,7 +288,11 @@ bool ARKitInterface::initialize() {
 
 			// make sure we have our feed setup
 			if (feed.is_null()) {
-				feed.instance();
+#if VERSION_MAJOR == 4
+        feed.instantiate();
+#else
+        feed.instance();
+#endif
 				feed->set_name("ARKit");
 
 				CameraServer *cs = CameraServer::get_singleton();
@@ -339,7 +324,7 @@ void ARKitInterface::uninitialize() {
 #endif
 		if (ar_server != NULL) {
 			// no longer our primary interface
-			ar_server->clear_primary_interface_if(this);
+			ar_server->set_primary_interface(nullptr);
 		}
 
 		if (feed.is_valid()) {
@@ -362,7 +347,7 @@ void ARKitInterface::uninitialize() {
 	}
 }
 
-Size2 ARKitInterface::get_render_targetsize() {
+Size2 ARKitInterface::get_render_target_size() {
 	GODOT_MAKE_THREAD_SAFE
 
 #if VERSION_MAJOR == 4
@@ -374,10 +359,10 @@ Size2 ARKitInterface::get_render_targetsize() {
 	return target_size;
 }
 
-Transform3D ARKitInterface::get_transform_for_eye(GodotBaseARInterface::Eyes p_eye, const Transform3D &p_cam_transform) {
+Transform3D ARKitInterface::get_transform_for_view(uint32_t p_view, const Transform3D &p_cam_transform) {
 	GODOT_MAKE_THREAD_SAFE
 
-	Transform3D transform_for_eye;
+	Transform3D transform_for_view;
 
 #if VERSION_MAJOR == 4
 	XRServer *ar_server = XRServer::get_singleton();
@@ -385,54 +370,30 @@ Transform3D ARKitInterface::get_transform_for_eye(GodotBaseARInterface::Eyes p_e
 	ARVRServer *ar_server = ARVRServer::get_singleton();
 #endif
 
-	ERR_FAIL_NULL_V(ar_server, transform_for_eye);
+	ERR_FAIL_NULL_V(ar_server, transform_for_view);
 
 	if (initialized) {
 		float world_scale = ar_server->get_world_scale();
 
 		// just scale our origin point of our transform, note that we really shouldn't be using world_scale in ARKit but....
-		transform_for_eye = transform;
-		transform_for_eye.origin *= world_scale;
+		transform_for_view = transform;
+		transform_for_view.origin *= world_scale;
 
-		transform_for_eye = p_cam_transform * ar_server->get_reference_frame() * transform_for_eye;
+		transform_for_view = p_cam_transform * ar_server->get_reference_frame() * transform_for_view;
 	} else {
 		// huh? well just return what we got....
-		transform_for_eye = p_cam_transform;
+		transform_for_view = p_cam_transform;
 	}
 
-	return transform_for_eye;
+	return transform_for_view;
 }
 
-Projection ARKitInterface::get_projection_for_eye(GodotBaseARInterface::Eyes p_eye, real_t p_aspect, real_t p_z_near, real_t p_z_far) {
+Projection ARKitInterface::get_projection_for_view(uint32_t p_view, double p_aspect, double p_z_near, double p_z_far) {
 	// Remember our near and far, it will be used in process when we obtain our projection from our ARKit session.
 	z_near = p_z_near;
 	z_far = p_z_far;
 
 	return projection;
-}
-
-void ARKitInterface::commit_for_eye(GodotBaseARInterface::Eyes p_eye, RID p_render_target, const Rect2 &p_screen_rect) {
-	GODOT_MAKE_THREAD_SAFE
-
-	// We must have a valid render target
-	ERR_FAIL_COND(!p_render_target.is_valid());
-
-	// Because we are rendering to our device we must use our main viewport!
-	ERR_FAIL_COND(p_screen_rect == Rect2());
-
-#if VERSION_MAJOR == 4
-#else
-	// get the size of our screen
-	Rect2 screen_rect = p_screen_rect;
-
-	//		screen_rect.position.x += screen_rect.size.x;
-	//		screen_rect.size.x = -screen_rect.size.x;
-	//		screen_rect.position.y += screen_rect.size.y;
-	//		screen_rect.size.y = -screen_rect.size.y;
-
-	VSG::rasterizer->set_current_render_target(RID());
-	VSG::rasterizer->blit_render_target_to_screen(p_render_target, screen_rect, 0);
-#endif
 }
 
 GodotARTracker *ARKitInterface::get_anchor_for_uuid(const unsigned char *p_uuid) {
@@ -624,7 +585,11 @@ void ARKitInterface::process() {
 								}
 							}
 
-							img[0].instance();
+#if VERSION_MAJOR == 4
+              img[0].instantiate();
+#else
+              img[0].instance();
+#endif
 							img[0]->create(new_width, new_height, 0, Image::FORMAT_R8, img_data[0]);
 						}
 
@@ -668,7 +633,11 @@ void ARKitInterface::process() {
 								}
 							}
 
-							img[1].instance();
+#if VERSION_MAJOR == 4
+              img[1].instantiate();
+#else
+              img[1].instance();
+#endif
 							img[1]->create(new_width, new_height, 0, Image::FORMAT_RG8, img_data[1]);
 						}
 
@@ -733,38 +702,38 @@ void ARKitInterface::process() {
 					// copy our current frame transform
 					matrix_float4x4 m44 = camera.transform;
 					if (orientation == UIInterfaceOrientationLandscapeLeft) {
-						transform.basis.elements[0].x = m44.columns[0][0];
-						transform.basis.elements[1].x = m44.columns[0][1];
-						transform.basis.elements[2].x = m44.columns[0][2];
-						transform.basis.elements[0].y = m44.columns[1][0];
-						transform.basis.elements[1].y = m44.columns[1][1];
-						transform.basis.elements[2].y = m44.columns[1][2];
+						transform.basis.rows[0].x = m44.columns[0][0];
+						transform.basis.rows[1].x = m44.columns[0][1];
+						transform.basis.rows[2].x = m44.columns[0][2];
+						transform.basis.rows[0].y = m44.columns[1][0];
+						transform.basis.rows[1].y = m44.columns[1][1];
+						transform.basis.rows[2].y = m44.columns[1][2];
 					} else if (orientation == UIInterfaceOrientationPortrait) {
-						transform.basis.elements[0].x = m44.columns[1][0];
-						transform.basis.elements[1].x = m44.columns[1][1];
-						transform.basis.elements[2].x = m44.columns[1][2];
-						transform.basis.elements[0].y = -m44.columns[0][0];
-						transform.basis.elements[1].y = -m44.columns[0][1];
-						transform.basis.elements[2].y = -m44.columns[0][2];
+						transform.basis.rows[0].x = m44.columns[1][0];
+						transform.basis.rows[1].x = m44.columns[1][1];
+						transform.basis.rows[2].x = m44.columns[1][2];
+						transform.basis.rows[0].y = -m44.columns[0][0];
+						transform.basis.rows[1].y = -m44.columns[0][1];
+						transform.basis.rows[2].y = -m44.columns[0][2];
 					} else if (orientation == UIInterfaceOrientationLandscapeRight) {
-						transform.basis.elements[0].x = -m44.columns[0][0];
-						transform.basis.elements[1].x = -m44.columns[0][1];
-						transform.basis.elements[2].x = -m44.columns[0][2];
-						transform.basis.elements[0].y = -m44.columns[1][0];
-						transform.basis.elements[1].y = -m44.columns[1][1];
-						transform.basis.elements[2].y = -m44.columns[1][2];
+						transform.basis.rows[0].x = -m44.columns[0][0];
+						transform.basis.rows[1].x = -m44.columns[0][1];
+						transform.basis.rows[2].x = -m44.columns[0][2];
+						transform.basis.rows[0].y = -m44.columns[1][0];
+						transform.basis.rows[1].y = -m44.columns[1][1];
+						transform.basis.rows[2].y = -m44.columns[1][2];
 					} else if (orientation == UIInterfaceOrientationPortraitUpsideDown) {
 						// this may not be correct
-						transform.basis.elements[0].x = m44.columns[1][0];
-						transform.basis.elements[1].x = m44.columns[1][1];
-						transform.basis.elements[2].x = m44.columns[1][2];
-						transform.basis.elements[0].y = m44.columns[0][0];
-						transform.basis.elements[1].y = m44.columns[0][1];
-						transform.basis.elements[2].y = m44.columns[0][2];
+						transform.basis.rows[0].x = m44.columns[1][0];
+						transform.basis.rows[1].x = m44.columns[1][1];
+						transform.basis.rows[2].x = m44.columns[1][2];
+						transform.basis.rows[0].y = m44.columns[0][0];
+						transform.basis.rows[1].y = m44.columns[0][1];
+						transform.basis.rows[2].y = m44.columns[0][2];
 					}
-					transform.basis.elements[0].z = m44.columns[2][0];
-					transform.basis.elements[1].z = m44.columns[2][1];
-					transform.basis.elements[2].z = m44.columns[2][2];
+					transform.basis.rows[0].z = m44.columns[2][0];
+					transform.basis.rows[1].z = m44.columns[2][1];
+					transform.basis.rows[2].z = m44.columns[2][2];
 					transform.origin.x = m44.columns[3][0];
 					transform.origin.y = m44.columns[3][1];
 					transform.origin.z = m44.columns[3][2];
@@ -818,7 +787,11 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 			if (@available(iOS 11.3, *)) {
 				if (planeAnchor.geometry.triangleCount > 0) {
 					Ref<SurfaceTool> surftool;
-					surftool.instance();
+#if VERSION_MAJOR == 4
+          surftool.instantiate();
+#else
+          surftool.instance();
+#endif
 					surftool->begin(Mesh::PRIMITIVE_TRIANGLES);
 
 					for (int j = planeAnchor.geometry.triangleCount * 3 - 1; j >= 0; j--) {
@@ -850,15 +823,15 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 			// We may extract that in our XRAnchor/ARVRAnchor class
 			Basis b;
 			matrix_float4x4 m44 = anchor.transform;
-			b.elements[0].x = m44.columns[0][0];
-			b.elements[1].x = m44.columns[0][1];
-			b.elements[2].x = m44.columns[0][2];
-			b.elements[0].y = m44.columns[1][0];
-			b.elements[1].y = m44.columns[1][1];
-			b.elements[2].y = m44.columns[1][2];
-			b.elements[0].z = m44.columns[2][0];
-			b.elements[1].z = m44.columns[2][1];
-			b.elements[2].z = m44.columns[2][2];
+			b.rows[0].x = m44.columns[0][0];
+			b.rows[1].x = m44.columns[0][1];
+			b.rows[2].x = m44.columns[0][2];
+			b.rows[0].y = m44.columns[1][0];
+			b.rows[1].y = m44.columns[1][1];
+			b.rows[2].y = m44.columns[1][2];
+			b.rows[0].z = m44.columns[2][0];
+			b.rows[1].z = m44.columns[2][1];
+			b.rows[2].z = m44.columns[2][2];
 			tracker->set_orientation(b);
 			tracker->set_rw_position(Vector3(m44.columns[3][0], m44.columns[3][1], m44.columns[3][2]));
 		}
