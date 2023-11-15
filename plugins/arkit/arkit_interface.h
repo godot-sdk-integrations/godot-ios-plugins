@@ -75,8 +75,6 @@ typedef void GodotARAnchor;
 class ARKitInterface : public GodotBaseARInterface {
 	GDCLASS(ARKitInterface, GodotBaseARInterface);
 
-  static ARKitInterface *instance;
-
 private:
 	bool initialized;
 	bool session_was_started;
