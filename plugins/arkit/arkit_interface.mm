@@ -813,14 +813,23 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 					}
 
 					surftool->generate_normals();
+#if VERSION_MAJOR == 4
+#else
 					tracker->set_mesh(surftool->commit());
+#endif
 				} else {
 					Ref<Mesh> nomesh;
+#if VERSION_MAJOR == 4
+#else
 					tracker->set_mesh(nomesh);
+#endif
 				}
 			} else {
 				Ref<Mesh> nomesh;
+#if VERSION_MAJOR == 4
+#else
 				tracker->set_mesh(nomesh);
+#endif
 			}
 
 			// Note, this also contains a scale factor which gives us an idea of the size of the anchor
@@ -836,8 +845,11 @@ void ARKitInterface::_add_or_update_anchor(GodotARAnchor *p_anchor) {
 			b.rows[0].z = m44.columns[2][0];
 			b.rows[1].z = m44.columns[2][1];
 			b.rows[2].z = m44.columns[2][2];
+#if VERSION_MAJOR == 4
+#else
 			tracker->set_orientation(b);
 			tracker->set_rw_position(Vector3(m44.columns[3][0], m44.columns[3][1], m44.columns[3][2]));
+#endif
 		}
 	}
 }
