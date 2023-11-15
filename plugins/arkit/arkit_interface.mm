@@ -79,6 +79,8 @@ ARSession *ar_session;
 ARKitSessionDelegate *ar_delegate;
 NSTimeInterval last_timestamp;
 
+ARKitInterface *ARKitInterface::instance = NULL;
+
 /* this is called when we initialize or when we come back from having our app pushed to the background, just (re)start our session */
 void ARKitInterface::start_session() {
 	// We're active...
@@ -879,6 +881,9 @@ void ARKitInterface::_remove_anchor(GodotARAnchor *p_anchor) {
 }
 
 ARKitInterface::ARKitInterface() {
+	ERR_FAIL_COND(instance != NULL);
+	instance = this;
+
 	initialized = false;
 	session_was_started = false;
 	plane_detection_is_enabled = false;
