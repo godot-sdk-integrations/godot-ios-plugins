@@ -52,6 +52,8 @@ public:
 
 	HealthKit();
 	~HealthKit();
+
+	bool is_available() const;
 };
 
 #endif

@@ -37,16 +37,18 @@
 #endif
 
 #import <Foundation/Foundation.h>
+#import <HealthKit/HealthKit.h>
+#import <HealthKit/HKHealthStore.h>
 
 HealthKit *HealthKit::instance = NULL;
 
 void HealthKit::_bind_methods() {
-	NSLog(@"HealthKit::_bind_methods()");
-};
+	ClassDB::bind_method(D_METHOD("is_available"), &HealthKit::is_available);
+}
 
 HealthKit *HealthKit::get_singleton() {
 	return instance;
-};
+}
 
 HealthKit::HealthKit() {
 	ERR_FAIL_COND(instance != NULL);
@@ -56,4 +58,8 @@ HealthKit::HealthKit() {
 
 HealthKit::~HealthKit() {
 	NSLog(@"HealthKit::~HealthKit()");
+}
+
+bool HealthKit::is_available() const {
+	return HKHealthStore.isHealthDataAvailable;
 }
