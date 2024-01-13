@@ -46,7 +46,7 @@ HKHealthStore* healthStore = NULL;
 void HealthKit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_available"), &HealthKit::is_available);
 	ClassDB::bind_method(D_METHOD("create_health_store"), &HealthKit::create_health_store);
-	//ClassDB::bind_method(D_METHOD("query_health_data", "start_date", "end_date", "data_type" /*, "callback"*/), &HealthKit::query_health_data);
+	ClassDB::bind_method(D_METHOD("query_health_data", "start_date", "end_date", "data_type", "on_query_success"), &HealthKit::query_health_data);
 }
 
 HealthKit* HealthKit::get_singleton() {
@@ -75,22 +75,22 @@ Error HealthKit::create_health_store() {
 	return OK;
 }
 
-#if 0
 static NSDate* create_date_from_unix_timestamp(long timestamp) {
 	return [NSDate dateWithTimeIntervalSince1970:timestamp];
 }
 
-static void call_query_callback(Callable* callback, double value) {
-	// Return result
+static void call_query_callback(const Callable* callable, double value) {
 	Callable::CallError err;
 	Variant args[] = { value };
-	callback.callp(&args, 1, NULL, &err);
+	const Variant* arg_ptrs[] = { &args[0] };
+	Variant ret;
+	callable->callp((const Variant**)arg_ptrs, 1, ret, err);
 	if (err.error != Callable::CallError::CALL_OK) {
 		ERR_PRINT("Error while calling query callback");
 	}
 }
 
-Error HealthKit::query_health_data(int start_date, int end_date, String data_type /*, Callable* callback*/) {
+Error HealthKit::query_health_data(int start_date, int end_date, String data_type, Callable on_query_success) {
 	if (!is_available()) {
 		NSLog(@"HealthKit is not available");
 		return ERR_UNAVAILABLE;
@@ -108,7 +108,7 @@ Error HealthKit::query_health_data(int start_date, int end_date, String data_typ
 	HKStatisticsQuery* query = [[HKStatisticsQuery alloc] initWithQuantityType:quantity_type quantitySamplePredicate:predicate options:HKStatisticsOptionCumulativeSum completionHandler:^(HKStatisticsQuery* query, HKStatistics* result, NSError* error) {
 		if (error) {
 			NSLog(@"Error while querying health data: %@", error);
-			//call_query_callback(callback, -1);
+			call_query_callback(&on_query_success, -1);
 			return;
 		}
 
@@ -116,7 +116,7 @@ Error HealthKit::query_health_data(int start_date, int end_date, String data_typ
 		double value = [quantity doubleValueForUnit:[HKUnit countUnit]];
 
 		// Return result
-		//call_query_callback(callback, value);
+		call_query_callback(&on_query_success, value);
 		NSLog(@"HealthKit query result: %f", value);
 	}];
 
@@ -124,4 +124,3 @@ Error HealthKit::query_health_data(int start_date, int end_date, String data_typ
 
 	return OK;
 }
-#endif

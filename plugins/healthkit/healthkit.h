@@ -39,13 +39,14 @@
 #include "core/object.h"
 #endif
 
-//typedef void (*health_data_callback)(double value);
+typedef void (*Health_Data_Callback)(double value);
 
 class HealthKit : public Object {
 
 	GDCLASS(HealthKit, Object);
 
 	static HealthKit* instance;
+
 	static void _bind_methods();
 
 public:
@@ -53,13 +54,14 @@ public:
 	static HealthKit *get_singleton();
 
 	HealthKit();
+
 	~HealthKit();
 
 	bool is_available() const;
+
 	Error create_health_store();
-	#if 0
-	Error query_health_data(int start_date, int end_date, String data_type /*, Callable* callback*/);
-	#endif
+
+	Error query_health_data(int start_date, int end_date, String data_type , Callable on_query_success);
 };
 
 #endif
