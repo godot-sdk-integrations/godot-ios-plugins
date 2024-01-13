@@ -61,7 +61,7 @@ public:
 
 	Error create_health_store();
 
-	Error query_health_data(int start_date, int end_date, String data_type , Callable on_query_success);
+	Error execute_statistics_query(String quantity_type_str, int start_date, int end_date, Callable on_query_success);
 };
 
 #endif

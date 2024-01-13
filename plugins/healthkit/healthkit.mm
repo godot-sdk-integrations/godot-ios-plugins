@@ -44,9 +44,13 @@ HealthKit* HealthKit::instance = NULL;
 HKHealthStore* healthStore = NULL;
 
 void HealthKit::_bind_methods() {
+	NSLog(@"Binding HealthKit methods...");
+
 	ClassDB::bind_method(D_METHOD("is_available"), &HealthKit::is_available);
 	ClassDB::bind_method(D_METHOD("create_health_store"), &HealthKit::create_health_store);
-	ClassDB::bind_method(D_METHOD("query_health_data", "start_date", "end_date", "data_type", "on_query_success"), &HealthKit::query_health_data);
+	ClassDB::bind_method(D_METHOD("execute_statistics_query", "quantity_type_str", "start_date", "end_date", "on_query_success"), &HealthKit::execute_statistics_query);
+
+	NSLog(@"HealthKit methods bound.");
 }
 
 HealthKit* HealthKit::get_singleton() {
@@ -66,12 +70,21 @@ bool HealthKit::is_available() const {
 }
 
 Error HealthKit::create_health_store() {
+	NSLog(@"Creating HealthKit store...");
+
 	if (!is_available()) {
-		NSLog(@"HealthKit is not available");
+		NSLog(@"HealthKit is not available.");
 		return ERR_UNAVAILABLE;
 	}
 
+	if (healthStore != NULL) {
+		NSLog(@"HealthKit store already created.");
+		return OK;
+	}
+
 	healthStore = [[HKHealthStore alloc] init];
+	NSLog(@"HealthKit store created.");
+
 	return OK;
 }
 
@@ -80,6 +93,8 @@ static NSDate* create_date_from_unix_timestamp(long timestamp) {
 }
 
 static void call_query_callback(const Callable* callable, double value) {
+	NSLog(@"Calling query callback...");
+
 	Callable::CallError err;
 	Variant args[] = { value };
 	const Variant* arg_ptrs[] = { &args[0] };
@@ -88,24 +103,37 @@ static void call_query_callback(const Callable* callable, double value) {
 	if (err.error != Callable::CallError::CALL_OK) {
 		ERR_PRINT("Error while calling query callback");
 	}
+
+	NSLog(@"Query callback called.");
 }
 
-Error HealthKit::query_health_data(int start_date, int end_date, String data_type, Callable on_query_success) {
+Error HealthKit::execute_statistics_query(String quantity_type_str, int start_date, int end_date, Callable on_query_success) {
+	NSLog(@"Executing HealthKit statistics query...");
+	NSLog(@"Quantity type: %s", quantity_type_str.utf8().get_data());
+	NSLog(@"Start date: %d", start_date);
+	NSLog(@"End date: %d", end_date);
+
 	if (!is_available()) {
 		NSLog(@"HealthKit is not available");
 		return ERR_UNAVAILABLE;
 	}
 
 	NSDate* start_date_nsdate = create_date_from_unix_timestamp(start_date);
+	NSLog(@"Start date nsdate: %@", start_date_nsdate);
+
 	NSDate* end_date_nsdate = create_date_from_unix_timestamp(end_date);
+	NSLog(@"End date nsdate: %@", end_date_nsdate);
 
-	NSString* data_type_nsstr = [[NSString alloc] initWithUTF8String:data_type.utf8().get_data()];
-
-	HKQuantityType* quantity_type = [HKQuantityType quantityTypeForIdentifier:data_type_nsstr];
+	NSString* quantity_type_nsstr = [[NSString alloc] initWithUTF8String:quantity_type_str.utf8().get_data()];
+	HKQuantityType* quantity_type = [HKQuantityType quantityTypeForIdentifier:quantity_type_nsstr];
+	NSLog(@"Quantity type: %@", quantity_type);
 
 	NSPredicate* predicate = [HKQuery predicateForSamplesWithStartDate:start_date_nsdate endDate:end_date_nsdate options:HKQueryOptionNone];
+	NSLog(@"Predicate: %@", predicate);
 
 	HKStatisticsQuery* query = [[HKStatisticsQuery alloc] initWithQuantityType:quantity_type quantitySamplePredicate:predicate options:HKStatisticsOptionCumulativeSum completionHandler:^(HKStatisticsQuery* query, HKStatistics* result, NSError* error) {
+		NSLog(@"HealthKit query completed.");
+
 		if (error) {
 			NSLog(@"Error while querying health data: %@", error);
 			call_query_callback(&on_query_success, -1);
@@ -114,13 +142,15 @@ Error HealthKit::query_health_data(int start_date, int end_date, String data_typ
 
 		HKQuantity* quantity = [result sumQuantity];
 		double value = [quantity doubleValueForUnit:[HKUnit countUnit]];
+		NSLog(@"HealthKit query result: %@", quantity);
 
 		// Return result
 		call_query_callback(&on_query_success, value);
-		NSLog(@"HealthKit query result: %f", value);
 	}];
+	NSLog(@"Query: %@", query);
 
 	[healthStore executeQuery:query];
+	NSLog(@"HealthKit query executed.");
 
 	return OK;
 }
