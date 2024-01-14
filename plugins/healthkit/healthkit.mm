@@ -47,16 +47,20 @@ static HKHealthStore *_health_store;
 void HealthKit::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_health_data_available"), &HealthKit::is_health_data_available);
 	ClassDB::bind_method(D_METHOD("request_authorization", "to_share", "to_read"), &HealthKit::request_authorization, DEFVAL(Vector<int>()), DEFVAL(Vector<int>()));
+	ClassDB::bind_method(D_METHOD("authorization_status_for_type", "object_type"), &HealthKit::authorization_status_for_type);
 	ClassDB::bind_method(D_METHOD("execute_statistics_query", "quantity_type", "start_date", "end_date"), &HealthKit::execute_statistics_query);
 
-	ADD_SIGNAL(MethodInfo("authorization_completed", PropertyInfo(Variant::INT, "object_type"), PropertyInfo(Variant::INT, "status")));
+	ADD_SIGNAL(MethodInfo("authorization_completed", PropertyInfo(Variant::INT, "status")));
 	ADD_SIGNAL(MethodInfo("statistics_query_completed", PropertyInfo(Variant::INT, "quantity_type"), PropertyInfo(Variant::FLOAT, "value")));
 	ADD_SIGNAL(MethodInfo("statistics_query_failed", PropertyInfo(Variant::INT, "quantity_type"), PropertyInfo(Variant::INT, "error_code")));
 
 	BIND_ENUM_CONSTANT(AUTHORIZATION_STATUS_NOT_DETERMINED);
-	BIND_ENUM_CONSTANT(AUTHORIZATION_STATUS_NOT_DETERMINED);
 	BIND_ENUM_CONSTANT(AUTHORIZATION_STATUS_DENIED);
 	BIND_ENUM_CONSTANT(AUTHORIZATION_STATUS_AUTHORIZED);
+
+	BIND_ENUM_CONSTANT(SHARING_AUTHORIZATION_STATUS_NOT_DETERMINED);
+	BIND_ENUM_CONSTANT(SHARING_AUTHORIZATION_STATUS_DENIED);
+	BIND_ENUM_CONSTANT(SHARING_AUTHORIZATION_STATUS_AUTHORIZED);
 
 	BIND_ENUM_CONSTANT(OBJECT_TYPE_UNKNOWN);
 	BIND_ENUM_CONSTANT(OBJECT_TYPE_QUANTITY_TYPE_STEP_COUNT);
@@ -75,26 +79,29 @@ bool HealthKit::is_health_data_available() const {
 	return HKHealthStore.isHealthDataAvailable;
 }
 
+static HKObjectType *_hkobjecttype_from_object_type(HealthKit::ObjectType object_type) {
+	switch (object_type) {
+		case HealthKit::OBJECT_TYPE_QUANTITY_TYPE_STEP_COUNT:
+			return [HKObjectType quantityTypeForIdentifier:HKQuantityTypeIdentifierStepCount];
+		case HealthKit::OBJECT_TYPE_QUANTITY_TYPE_ACTIVE_ENERY_BURNED:
+			return [HKObjectType quantityTypeForIdentifier:HKQuantityTypeIdentifierActiveEnergyBurned];
+		case HealthKit::OBJECT_TYPE_UNKNOWN:
+		default:
+			NSLog(@"Error unknown object type");
+			return nil;
+	}
+}
+
 static NSSet *_nsset_from_object_type_vector(Vector<int> obj_type_vector) {
 	NSMutableSet *to_share_nsmutableset = [NSMutableSet set];
 
 	for (int i = 0; i < obj_type_vector.size(); i++) {
 		HealthKit::ObjectType object_type = (HealthKit::ObjectType)obj_type_vector[i];
-		HKObjectType *object_type_nsobj;
-
-		switch (object_type) {
-			case HealthKit::OBJECT_TYPE_QUANTITY_TYPE_STEP_COUNT:
-				object_type_nsobj = [HKObjectType quantityTypeForIdentifier:HKQuantityTypeIdentifierStepCount];
-				break;
-			case HealthKit::OBJECT_TYPE_QUANTITY_TYPE_ACTIVE_ENERY_BURNED:
-				object_type_nsobj = [HKObjectType quantityTypeForIdentifier:HKQuantityTypeIdentifierActiveEnergyBurned];
-				break;
-			case HealthKit::OBJECT_TYPE_UNKNOWN:
-			default:
-				NSLog(@"Error unknown object type");
-				return [NSSet set];
+		HKObjectType *object_type_nsobj = _hkobjecttype_from_object_type(object_type);
+		if (object_type_nsobj == nil) {
+			NSLog(@"Error while requesting HealthKit authorization.");
+			return [NSSet set];
 		}
-
 		[to_share_nsmutableset addObject:object_type_nsobj];
 	}
 
@@ -125,20 +132,41 @@ Error HealthKit::request_authorization(Vector<int> to_share, Vector<int> to_read
 
 		if (error) {
 			NSLog(@"Error while requesting HealthKit authorization: %@", error);
-			emit_signal("authorization_completed", OBJECT_TYPE_UNKNOWN, AUTHORIZATION_STATUS_NOT_DETERMINED);
+			emit_signal("authorization_completed", AUTHORIZATION_STATUS_NOT_DETERMINED);
 			return;
 		}
 
 		if (success) {
 			NSLog(@"HealthKit authorization succeeded.");
-			emit_signal("authorization_completed", OBJECT_TYPE_UNKNOWN, AUTHORIZATION_STATUS_AUTHORIZED);
+			emit_signal("authorization_completed", AUTHORIZATION_STATUS_AUTHORIZED);
 		} else {
 			NSLog(@"HealthKit authorization failed.");
-			emit_signal("authorization_completed", OBJECT_TYPE_UNKNOWN, AUTHORIZATION_STATUS_DENIED);
+			emit_signal("authorization_completed", AUTHORIZATION_STATUS_DENIED);
 		}
 	}];
 
 	return OK;
+}
+
+HealthKit::SharingAuthorizationStatus HealthKit::authorization_status_for_type(ObjectType object_type) {
+	HKObjectType *object_type_nsobj = _hkobjecttype_from_object_type(object_type);
+	if (object_type_nsobj == nil) {
+		NSLog(@"Error while requesting HealthKit authorization status.");
+		return SHARING_AUTHORIZATION_STATUS_NOT_DETERMINED;
+	}
+
+	HKAuthorizationStatus status = [_health_store authorizationStatusForType:object_type_nsobj];
+
+	switch (status) {
+		case HKAuthorizationStatusSharingDenied:
+			return SHARING_AUTHORIZATION_STATUS_DENIED;
+		case HKAuthorizationStatusSharingAuthorized:
+			return SHARING_AUTHORIZATION_STATUS_AUTHORIZED;
+		case HKAuthorizationStatusNotDetermined:
+		default:
+			NSLog(@"Error while requesting HealthKit authorization status.");
+			return SHARING_AUTHORIZATION_STATUS_NOT_DETERMINED;
+	}
 }
 
 Error HealthKit::execute_statistics_query(QuantityType quantity_type, int start_date, int end_date) {

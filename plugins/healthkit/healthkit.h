@@ -56,6 +56,12 @@ public:
 		AUTHORIZATION_STATUS_AUTHORIZED,
 	};
 
+	enum SharingAuthorizationStatus {
+		SHARING_AUTHORIZATION_STATUS_NOT_DETERMINED,
+		SHARING_AUTHORIZATION_STATUS_DENIED,
+		SHARING_AUTHORIZATION_STATUS_AUTHORIZED,
+	};
+
 	enum ObjectType {
 		OBJECT_TYPE_UNKNOWN,
 		OBJECT_TYPE_QUANTITY_TYPE_STEP_COUNT,
@@ -72,6 +78,7 @@ public:
 
 	bool is_health_data_available() const;
 	Error request_authorization(Vector<int> to_share, Vector<int> to_read);
+	SharingAuthorizationStatus authorization_status_for_type(ObjectType object_type);
 	Error execute_statistics_query(QuantityType quantity_type, int start_date, int end_date);
 
 	HealthKit();
@@ -79,6 +86,7 @@ public:
 };
 
 VARIANT_ENUM_CAST(HealthKit::AuthorizationStatus);
+VARIANT_ENUM_CAST(HealthKit::SharingAuthorizationStatus);
 VARIANT_ENUM_CAST(HealthKit::ObjectType);
 VARIANT_ENUM_CAST(HealthKit::QuantityType);
 

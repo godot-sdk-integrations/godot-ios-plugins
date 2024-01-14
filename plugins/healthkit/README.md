@@ -21,6 +21,10 @@ Values: `QUANTITY_TYPE_UNKNOWN`, `QUANTITY_TYPE_STEP_COUNT`, `QUANTITY_TYPE_ACTI
 
 - Requests authorization to share and read the given object types.
 
+`SharingAuthorizationStatus authorization_status_for_type(ObjectType object_type)`
+
+- Used to determine if the user is permitted to share the given object type. Should be called before actually sharing.
+
 `Error execute_statistics_query(QuantityType quantity_type, int start_date, int end_date)`
 
 - Starts a query to query health data of the given quantity type.
