@@ -35,33 +35,51 @@
 
 #if VERSION_MAJOR == 4
 #include "core/object/class_db.h"
+#include "core/templates/vector.h"
 #else
 #include "core/object.h"
+#include "core/vector.h"
 #endif
 
-typedef void (*Health_Data_Callback)(double value);
-
 class HealthKit : public Object {
-
 	GDCLASS(HealthKit, Object);
 
-	static HealthKit* instance;
+	static HealthKit *_instance;
 
 	static void _bind_methods();
 
 public:
 
+	enum AuthorizationStatus {
+		AUTHORIZATION_STATUS_NOT_DETERMINED,
+		AUTHORIZATION_STATUS_DENIED,
+		AUTHORIZATION_STATUS_AUTHORIZED,
+	};
+
+	enum ObjectType {
+		OBJECT_TYPE_UNKNOWN,
+		OBJECT_TYPE_QUANTITY_TYPE_STEP_COUNT,
+		OBJECT_TYPE_QUANTITY_TYPE_ACTIVE_ENERY_BURNED,
+	};
+
+	enum QuantityType {
+		QUANTITY_TYPE_UNKNOWN,
+		QUANTITY_TYPE_STEP_COUNT,
+		QUANTITY_TYPE_ACTIVE_ENERY_BURNED,
+	};
+
 	static HealthKit *get_singleton();
 
+	bool is_health_data_available() const;
+	Error request_authorization(Vector<int> to_share, Vector<int> to_read);
+	Error execute_statistics_query(QuantityType quantity_type, int start_date, int end_date);
+
 	HealthKit();
-
 	~HealthKit();
-
-	bool is_available() const;
-
-	Error create_health_store();
-
-	Error execute_statistics_query(String quantity_type_str, int start_date, int end_date, Callable on_query_success);
 };
+
+VARIANT_ENUM_CAST(HealthKit::AuthorizationStatus);
+VARIANT_ENUM_CAST(HealthKit::ObjectType);
+VARIANT_ENUM_CAST(HealthKit::QuantityType);
 
 #endif

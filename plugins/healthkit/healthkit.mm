@@ -40,120 +40,168 @@
 #import <HealthKit/HealthKit.h>
 #import <HealthKit/HKHealthStore.h>
 
-HealthKit* HealthKit::instance = NULL;
-HKHealthStore* healthStore = NULL;
+HealthKit *HealthKit::_instance = NULL;
+
+static HKHealthStore *_health_store;
 
 void HealthKit::_bind_methods() {
-	NSLog(@"Binding HealthKit methods...");
+	ClassDB::bind_method(D_METHOD("is_health_data_available"), &HealthKit::is_health_data_available);
+	ClassDB::bind_method(D_METHOD("request_authorization", "to_share", "to_read"), &HealthKit::request_authorization, DEFVAL(Vector<int>()), DEFVAL(Vector<int>()));
+	ClassDB::bind_method(D_METHOD("execute_statistics_query", "quantity_type", "start_date", "end_date"), &HealthKit::execute_statistics_query);
 
-	ClassDB::bind_method(D_METHOD("is_available"), &HealthKit::is_available);
-	ClassDB::bind_method(D_METHOD("create_health_store"), &HealthKit::create_health_store);
-	ClassDB::bind_method(D_METHOD("execute_statistics_query"), &HealthKit::execute_statistics_query);
+	ADD_SIGNAL(MethodInfo("authorization_completed", PropertyInfo(Variant::INT, "object_type"), PropertyInfo(Variant::INT, "status")));
+	ADD_SIGNAL(MethodInfo("statistics_query_completed", PropertyInfo(Variant::INT, "quantity_type"), PropertyInfo(Variant::FLOAT, "value")));
+	ADD_SIGNAL(MethodInfo("statistics_query_failed", PropertyInfo(Variant::INT, "quantity_type"), PropertyInfo(Variant::INT, "error_code")));
 
-	NSLog(@"HealthKit methods bound.");
+	BIND_ENUM_CONSTANT(AUTHORIZATION_STATUS_NOT_DETERMINED);
+	BIND_ENUM_CONSTANT(AUTHORIZATION_STATUS_NOT_DETERMINED);
+	BIND_ENUM_CONSTANT(AUTHORIZATION_STATUS_DENIED);
+	BIND_ENUM_CONSTANT(AUTHORIZATION_STATUS_AUTHORIZED);
+
+	BIND_ENUM_CONSTANT(OBJECT_TYPE_UNKNOWN);
+	BIND_ENUM_CONSTANT(OBJECT_TYPE_QUANTITY_TYPE_STEP_COUNT);
+	BIND_ENUM_CONSTANT(OBJECT_TYPE_QUANTITY_TYPE_ACTIVE_ENERY_BURNED);
+
+	BIND_ENUM_CONSTANT(QUANTITY_TYPE_UNKNOWN);
+	BIND_ENUM_CONSTANT(QUANTITY_TYPE_STEP_COUNT);
+	BIND_ENUM_CONSTANT(QUANTITY_TYPE_ACTIVE_ENERY_BURNED);
 }
 
-HealthKit* HealthKit::get_singleton() {
-	return instance;
+HealthKit *HealthKit::get_singleton() {
+	return _instance;
 }
 
-HealthKit::HealthKit() {
-	ERR_FAIL_COND(instance != NULL);
-	instance = this;
-}
-
-HealthKit::~HealthKit() {
-}
-
-bool HealthKit::is_available() const {
+bool HealthKit::is_health_data_available() const {
 	return HKHealthStore.isHealthDataAvailable;
 }
 
-Error HealthKit::create_health_store() {
-	NSLog(@"Creating HealthKit store...");
+static NSSet *_nsset_from_object_type_vector(Vector<int> obj_type_vector) {
+	NSMutableSet *to_share_nsmutableset = [NSMutableSet set];
 
-	if (!is_available()) {
-		NSLog(@"HealthKit is not available.");
-		return ERR_UNAVAILABLE;
+	for (int i = 0; i < obj_type_vector.size(); i++) {
+		HealthKit::ObjectType object_type = (HealthKit::ObjectType)obj_type_vector[i];
+		HKObjectType *object_type_nsobj;
+
+		switch (object_type) {
+			case HealthKit::OBJECT_TYPE_QUANTITY_TYPE_STEP_COUNT:
+				object_type_nsobj = [HKObjectType quantityTypeForIdentifier:HKQuantityTypeIdentifierStepCount];
+				break;
+			case HealthKit::OBJECT_TYPE_QUANTITY_TYPE_ACTIVE_ENERY_BURNED:
+				object_type_nsobj = [HKObjectType quantityTypeForIdentifier:HKQuantityTypeIdentifierActiveEnergyBurned];
+				break;
+			case HealthKit::OBJECT_TYPE_UNKNOWN:
+			default:
+				NSLog(@"Error unknown object type");
+				return [NSSet set];
+		}
+
+		[to_share_nsmutableset addObject:object_type_nsobj];
 	}
 
-	if (healthStore != NULL) {
-		NSLog(@"HealthKit store already created.");
-		return OK;
-	}
-
-	healthStore = [[HKHealthStore alloc] init];
-	NSLog(@"HealthKit store created.");
-
-	return OK;
+	return [NSSet setWithSet:to_share_nsmutableset];
 }
 
-static NSDate* create_date_from_unix_timestamp(long timestamp) {
-	return [NSDate dateWithTimeIntervalSince1970:timestamp];
-}
+Error HealthKit::request_authorization(Vector<int> to_share, Vector<int> to_read) {
+	NSLog(@"Requesting HealthKit authorization...");
 
-static void call_query_callback(const Callable* callable, double value) {
-	NSLog(@"Calling query callback...");
-
-	Callable::CallError err;
-	Variant args[] = { value };
-	const Variant* arg_ptrs[] = { &args[0] };
-	Variant ret;
-	callable->callp((const Variant**)arg_ptrs, 1, ret, err);
-	if (err.error != Callable::CallError::CALL_OK) {
-		ERR_PRINT("Error while calling query callback");
-	}
-
-	NSLog(@"Query callback called.");
-}
-
-Error HealthKit::execute_statistics_query(String quantity_type_str, int start_date, int end_date, Callable on_query_success) {
-	NSLog(@"Executing HealthKit statistics query...");
-	// const char* quantity_type_cstr = quantity_type_str.ascii().get_data();
-	// NSLog(@"Quantity type cstr: %s", quantity_type_cstr);
-	// NSString* quantity_type_nsstr = [[NSString alloc] initWithUTF8String:quantity_type_cstr];
-	// NSLog(@"Quantity type NSString: %@", quantity_type_nsstr);
-	NSLog(@"Start date: %d", start_date);
-	NSLog(@"End date: %d", end_date);
-
-	if (!is_available()) {
+	if (!is_health_data_available()) {
 		NSLog(@"HealthKit is not available");
 		return ERR_UNAVAILABLE;
 	}
 
-	NSDate* start_date_nsdate = create_date_from_unix_timestamp(start_date);
-	NSLog(@"Start date nsdate: %@", start_date_nsdate);
+	NSSet *to_share_nsset = _nsset_from_object_type_vector(to_share);
+	if (to_share_nsset.count != to_share.size()) {
+		NSLog(@"Error while requesting HealthKit authorization.");
+		return ERR_INVALID_PARAMETER;
+	}
+	NSSet *to_read_nsset = _nsset_from_object_type_vector(to_read);
+	if (to_read_nsset.count != to_read.size()) {
+		NSLog(@"Error while requesting HealthKit authorization.");
+		return ERR_INVALID_PARAMETER;
+	}
 
-	NSDate* end_date_nsdate = create_date_from_unix_timestamp(end_date);
-	NSLog(@"End date nsdate: %@", end_date_nsdate);
+	[_health_store requestAuthorizationToShareTypes:to_share_nsset readTypes:to_read_nsset completion:^(BOOL success, NSError *error) {
+		NSLog(@"HealthKit authorization completed.");
 
-	// HKQuantityType* quantity_type = [HKQuantityType quantityTypeForIdentifier:quantity_type_nsstr];
-	HKQuantityType* quantity_type = [HKQuantityType quantityTypeForIdentifier:HKQuantityTypeIdentifierStepCount];
-	NSLog(@"Quantity type: %@", quantity_type);
+		if (error) {
+			NSLog(@"Error while requesting HealthKit authorization: %@", error);
+			emit_signal("authorization_completed", OBJECT_TYPE_UNKNOWN, AUTHORIZATION_STATUS_NOT_DETERMINED);
+			return;
+		}
 
-	NSPredicate* predicate = [HKQuery predicateForSamplesWithStartDate:start_date_nsdate endDate:end_date_nsdate options:HKQueryOptionNone];
-	NSLog(@"Predicate: %@", predicate);
+		if (success) {
+			NSLog(@"HealthKit authorization succeeded.");
+			emit_signal("authorization_completed", OBJECT_TYPE_UNKNOWN, AUTHORIZATION_STATUS_AUTHORIZED);
+		} else {
+			NSLog(@"HealthKit authorization failed.");
+			emit_signal("authorization_completed", OBJECT_TYPE_UNKNOWN, AUTHORIZATION_STATUS_DENIED);
+		}
+	}];
 
-	HKStatisticsQuery* query = [[HKStatisticsQuery alloc] initWithQuantityType:quantity_type quantitySamplePredicate:predicate options:HKStatisticsOptionCumulativeSum completionHandler:^(HKStatisticsQuery* query, HKStatistics* result, NSError* error) {
+	return OK;
+}
+
+Error HealthKit::execute_statistics_query(QuantityType quantity_type, int start_date, int end_date) {
+	NSLog(@"Executing HealthKit statistics query...");
+
+	if (!is_health_data_available()) {
+		NSLog(@"HealthKit is not available");
+		return ERR_UNAVAILABLE;
+	}
+
+	NSDate *start_date_nsdate = [NSDate dateWithTimeIntervalSince1970:start_date];
+	NSDate *end_date_nsdate = [NSDate dateWithTimeIntervalSince1970:end_date];
+
+	HKQuantityType *hk_quantity_type;
+	switch (quantity_type) {
+		case QUANTITY_TYPE_STEP_COUNT:
+			hk_quantity_type = [HKQuantityType quantityTypeForIdentifier:HKQuantityTypeIdentifierStepCount];
+			break;
+		case QUANTITY_TYPE_ACTIVE_ENERY_BURNED:
+			hk_quantity_type = [HKQuantityType quantityTypeForIdentifier:HKQuantityTypeIdentifierActiveEnergyBurned];
+			break;
+		case QUANTITY_TYPE_UNKNOWN:
+		default:
+			NSLog(@"Unknown quantity type");
+			return ERR_INVALID_PARAMETER;
+	}
+
+	NSPredicate *predicate = [HKQuery predicateForSamplesWithStartDate:start_date_nsdate endDate:end_date_nsdate options:HKQueryOptionNone];
+
+	HKStatisticsQuery *query = [[HKStatisticsQuery alloc] initWithQuantityType:hk_quantity_type quantitySamplePredicate:predicate options:HKStatisticsOptionCumulativeSum completionHandler:^(HKStatisticsQuery *query, HKStatistics *result, NSError *error) {
 		NSLog(@"HealthKit query completed.");
 
 		if (error) {
 			NSLog(@"Error while querying health data: %@", error);
-			call_query_callback(&on_query_success, -1);
+			emit_signal("statistics_query_failed", quantity_type, error.code);
 			return;
 		}
 
-		HKQuantity* quantity = [result sumQuantity];
+		HKQuantity *quantity = [result sumQuantity];
 		double value = [quantity doubleValueForUnit:[HKUnit countUnit]];
-		NSLog(@"HealthKit query result: %@", quantity);
 
-		// Return result
-		call_query_callback(&on_query_success, value);
+		emit_signal("statistics_query_completed", quantity_type, value);
 	}];
-	NSLog(@"Query: %@", query);
 
-	[healthStore executeQuery:query];
+	[_health_store executeQuery:query];
 	NSLog(@"HealthKit query executed.");
 
 	return OK;
+}
+
+HealthKit::HealthKit() {
+	ERR_FAIL_COND(_instance != NULL);
+	_instance = this;
+
+	NSLog(@"Creating HealthStore...");
+	if (is_health_data_available()) {
+		_health_store = [[HKHealthStore alloc] init];
+		NSLog(@"HealthStore created.");
+	} else {
+		NSLog(@"HealthKit is not available");
+		NSLog(@"HealthStore creation failed.");
+	}
+}
+
+HealthKit::~HealthKit() {
 }
