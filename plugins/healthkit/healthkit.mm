@@ -64,11 +64,11 @@ void HealthKit::_bind_methods() {
 
 	BIND_ENUM_CONSTANT(OBJECT_TYPE_UNKNOWN);
 	BIND_ENUM_CONSTANT(OBJECT_TYPE_QUANTITY_TYPE_STEP_COUNT);
-	BIND_ENUM_CONSTANT(OBJECT_TYPE_QUANTITY_TYPE_ACTIVE_ENERY_BURNED);
+	BIND_ENUM_CONSTANT(OBJECT_TYPE_QUANTITY_TYPE_ACTIVE_ENERGY_BURNED);
 
 	BIND_ENUM_CONSTANT(QUANTITY_TYPE_UNKNOWN);
 	BIND_ENUM_CONSTANT(QUANTITY_TYPE_STEP_COUNT);
-	BIND_ENUM_CONSTANT(QUANTITY_TYPE_ACTIVE_ENERY_BURNED);
+	BIND_ENUM_CONSTANT(QUANTITY_TYPE_ACTIVE_ENERGY_BURNED);
 }
 
 HealthKit *HealthKit::get_singleton() {
@@ -83,7 +83,7 @@ static HKObjectType *_hkobjecttype_from_object_type(HealthKit::ObjectType object
 	switch (object_type) {
 		case HealthKit::OBJECT_TYPE_QUANTITY_TYPE_STEP_COUNT:
 			return [HKObjectType quantityTypeForIdentifier:HKQuantityTypeIdentifierStepCount];
-		case HealthKit::OBJECT_TYPE_QUANTITY_TYPE_ACTIVE_ENERY_BURNED:
+		case HealthKit::OBJECT_TYPE_QUANTITY_TYPE_ACTIVE_ENERGY_BURNED:
 			return [HKObjectType quantityTypeForIdentifier:HKQuantityTypeIdentifierActiveEnergyBurned];
 		case HealthKit::OBJECT_TYPE_UNKNOWN:
 		default:
@@ -185,7 +185,7 @@ Error HealthKit::execute_statistics_query(QuantityType quantity_type, int start_
 		case QUANTITY_TYPE_STEP_COUNT:
 			hk_quantity_type = [HKQuantityType quantityTypeForIdentifier:HKQuantityTypeIdentifierStepCount];
 			break;
-		case QUANTITY_TYPE_ACTIVE_ENERY_BURNED:
+		case QUANTITY_TYPE_ACTIVE_ENERGY_BURNED:
 			hk_quantity_type = [HKQuantityType quantityTypeForIdentifier:HKQuantityTypeIdentifierActiveEnergyBurned];
 			break;
 		case QUANTITY_TYPE_UNKNOWN:
