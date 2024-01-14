@@ -40,7 +40,7 @@
 
 #include "healthkit.h"
 
-HealthKit *healthKit;
+HealthKit* healthKit;
 
 void register_healthkit_types() {
 	healthKit = memnew(HealthKit);

@@ -48,7 +48,7 @@ void HealthKit::_bind_methods() {
 
 	ClassDB::bind_method(D_METHOD("is_available"), &HealthKit::is_available);
 	ClassDB::bind_method(D_METHOD("create_health_store"), &HealthKit::create_health_store);
-	ClassDB::bind_method(D_METHOD("execute_statistics_query", "quantity_type_str", "start_date", "end_date", "on_query_success"), &HealthKit::execute_statistics_query);
+	ClassDB::bind_method(D_METHOD("execute_statistics_query"), &HealthKit::execute_statistics_query);
 
 	NSLog(@"HealthKit methods bound.");
 }
@@ -109,7 +109,10 @@ static void call_query_callback(const Callable* callable, double value) {
 
 Error HealthKit::execute_statistics_query(String quantity_type_str, int start_date, int end_date, Callable on_query_success) {
 	NSLog(@"Executing HealthKit statistics query...");
-	NSLog(@"Quantity type: %s", quantity_type_str.utf8().get_data());
+	// const char* quantity_type_cstr = quantity_type_str.ascii().get_data();
+	// NSLog(@"Quantity type cstr: %s", quantity_type_cstr);
+	// NSString* quantity_type_nsstr = [[NSString alloc] initWithUTF8String:quantity_type_cstr];
+	// NSLog(@"Quantity type NSString: %@", quantity_type_nsstr);
 	NSLog(@"Start date: %d", start_date);
 	NSLog(@"End date: %d", end_date);
 
@@ -124,8 +127,8 @@ Error HealthKit::execute_statistics_query(String quantity_type_str, int start_da
 	NSDate* end_date_nsdate = create_date_from_unix_timestamp(end_date);
 	NSLog(@"End date nsdate: %@", end_date_nsdate);
 
-	NSString* quantity_type_nsstr = [[NSString alloc] initWithUTF8String:quantity_type_str.utf8().get_data()];
-	HKQuantityType* quantity_type = [HKQuantityType quantityTypeForIdentifier:quantity_type_nsstr];
+	// HKQuantityType* quantity_type = [HKQuantityType quantityTypeForIdentifier:quantity_type_nsstr];
+	HKQuantityType* quantity_type = [HKQuantityType quantityTypeForIdentifier:HKQuantityTypeIdentifierStepCount];
 	NSLog(@"Quantity type: %@", quantity_type);
 
 	NSPredicate* predicate = [HKQuery predicateForSamplesWithStartDate:start_date_nsdate endDate:end_date_nsdate options:HKQueryOptionNone];
