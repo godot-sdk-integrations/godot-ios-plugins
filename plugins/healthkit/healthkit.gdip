@@ -1,0 +1,17 @@
+[config]
+name="HealthKit"
+binary="healthkit.xcframework"
+
+initialization="register_healthkit_types"
+deinitialization="unregister_healthkit_types"
+
+[dependencies]
+linked=[]
+embedded=[]
+system=[]
+
+capabilities=[]
+
+files=[]
+
+[plist]
