@@ -37,11 +37,12 @@ void register_arkit_types() {
 	// does it make sense to register the class?
 
 	Ref<ARKitInterface> arkit_interface;
-	arkit_interface.instance();
 
 #if VERSION_MAJOR == 4
+	arkit_interface.instantiate();
 	XRServer::get_singleton()->add_interface(arkit_interface);
 #else
+	arkit_interface.instance();
 	ARVRServer::get_singleton()->add_interface(arkit_interface);
 #endif
 }
