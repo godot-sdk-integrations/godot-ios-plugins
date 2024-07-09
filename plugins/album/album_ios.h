@@ -49,6 +49,7 @@ class AlbumIOS : public Object {
 
 public:
 	void publish_image_to_album(String path_to_image);
+	void publish_video_to_album(String path_to_video);
 
 	static AlbumIOS *get_singleton();
 

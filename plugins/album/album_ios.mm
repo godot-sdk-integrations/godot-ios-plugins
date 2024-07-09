@@ -37,7 +37,8 @@
 AlbumIOS *AlbumIOS::instance = NULL;
 
 void AlbumIOS::_bind_methods() {
-	ClassDB::bind_method(D_METHOD("publish_image_to_album"), &AlbumIOS::publish_image_to_album);	
+	ClassDB::bind_method(D_METHOD("publish_image_to_album"), &AlbumIOS::publish_image_to_album);
+	ClassDB::bind_method(D_METHOD("publish_video_to_album"), &AlbumIOS::publish_video_to_album);
 }
 
 AlbumIOS *AlbumIOS::get_singleton() {
@@ -53,6 +54,11 @@ void AlbumIOS::publish_image_to_album(String path_to_image) {
 	NSString *path_to_image_ns = [NSString stringWithCString:path_to_image.utf8().get_data() encoding:NSUTF8StringEncoding];
 	UIImage *image = [UIImage imageWithContentsOfFile:path_to_image_ns];
 	UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);	
+}
+
+void AlbumIOS::publish_video_to_album(String path_to_video) {
+	NSString *path_to_video_ns = [NSString stringWithCString:path_to_video.utf8().get_data() encoding:NSUTF8StringEncoding];
+	UISaveVideoAtPathToSavedPhotosAlbum(path_to_video_ns, nil, nil, nil);	
 }
 
 AlbumIOS::~AlbumIOS() {
