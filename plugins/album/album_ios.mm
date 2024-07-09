@@ -30,8 +30,10 @@
 
 #include "album_ios.h"
 
+#import <Foundation/Foundation.h>
 
-AlbumIOSIOS *AlbumIOSIOS::instance = NULL;
+
+AlbumIOS *AlbumIOS::instance = NULL;
 
 void AlbumIOS::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("publish_image_to_album"), &AlbumIOS::publish_image_to_album);	
