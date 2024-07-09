@@ -31,6 +31,7 @@
 #include "album_ios.h"
 
 #import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
 
 
 AlbumIOS *AlbumIOS::instance = NULL;
@@ -50,8 +51,8 @@ AlbumIOS::AlbumIOS() {
 
 void AlbumIOS::publish_image_to_album(String path_to_image) {
 	NSString *path_to_image_ns = [NSString stringWithCString:path_to_image.utf8().get_data() encoding:NSUTF8StringEncoding];
-
-	
+	UIImage *image = [UIImage imageWithContentsOfFile:path_to_image_ns];
+	UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil);	
 }
 
 AlbumIOS::~AlbumIOS() {
