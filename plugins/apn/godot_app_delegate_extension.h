@@ -36,6 +36,10 @@
 #import "platform/iphone/godot_app_delegate.h"
 #endif
 
+#if VERSION_MAJOR == 4 && VERSION_MINOR >= 4
+@interface GodotApplicationDelegate (PushNotifications)
+#else
 @interface GodotApplicalitionDelegate (PushNotifications)
+#endif
 
 @end

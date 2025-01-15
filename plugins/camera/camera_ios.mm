@@ -218,7 +218,11 @@ typedef PoolVector<uint8_t> GodotUInt8Vector;
 		}
 
 		// set our texture...
+#if VERSION_MAJOR == 4 && VERSION_MINOR >= 4
+		feed->set_ycbcr_images(img[0], img[1]);
+#else
 		feed->set_YCbCr_imgs(img[0], img[1]);
+#endif
 
 		// update our matrix to match the orientation, note, before changing anything
 		// here, be aware that the project orientation settings must match your xcode
