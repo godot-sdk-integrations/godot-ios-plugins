@@ -43,7 +43,11 @@
 struct APNSInitializer {
 
 	APNSInitializer() {
+#if VERSION_MAJOR == 4 && VERSION_MINOR >= 4
+		[GodotApplicationDelegate addService:[GodotAPNAppDelegate shared]];
+#else
 		[GodotApplicalitionDelegate addService:[GodotAPNAppDelegate shared]];
+#endif
 	}
 };
 static APNSInitializer initializer;

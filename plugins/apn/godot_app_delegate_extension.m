@@ -30,6 +30,45 @@
 
 #include "godot_app_delegate_extension.h"
 
+#if VERSION_MAJOR == 4 && VERSION_MINOR >= 4
+@implementation GodotApplicationDelegate (PushNotifications)
+
+- (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
+	for (ApplicationDelegateService *service in GodotApplicationDelegate.services) {
+		if (![service respondsToSelector:_cmd]) {
+			continue;
+		}
+
+		[service application:application didRegisterForRemoteNotificationsWithDeviceToken:deviceToken];
+	}
+}
+
+- (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
+	for (ApplicationDelegateService *service in GodotApplicationDelegate.services) {
+		if (![service respondsToSelector:_cmd]) {
+			continue;
+		}
+
+		[service application:application didFailToRegisterForRemoteNotificationsWithError:error];
+	}
+}
+
+- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult result))completionHandler {
+	for (ApplicationDelegateService *service in GodotApplicationDelegate.services) {
+		if (![service respondsToSelector:_cmd]) {
+			continue;
+		}
+
+		[service application:application didReceiveRemoteNotification:userInfo fetchCompletionHandler:completionHandler];
+	}
+
+	completionHandler(UIBackgroundFetchResultNoData);
+}
+
+@end
+
+#else
+
 @implementation GodotApplicalitionDelegate (PushNotifications)
 
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
@@ -65,3 +104,4 @@
 }
 
 @end
+#endif
