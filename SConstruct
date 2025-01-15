@@ -20,7 +20,7 @@ env = DefaultEnvironment()
 
 # Define our options
 opts.Add(EnumVariable('target', "Compilation target", 'debug', ['debug', 'release', "release_debug"]))
-opts.Add(EnumVariable('arch', "Compilation Architecture", '', ['', 'arm64', 'armv7', 'x86_64']))
+opts.Add(EnumVariable('arch', "Compilation Architecture", '', ['', 'arm64', 'x86_64']))
 opts.Add(BoolVariable('simulator', "Compilation platform", 'no'))
 opts.Add(BoolVariable('use_llvm', "Use the LLVM / Clang compiler", 'no'))
 opts.Add(PathVariable('target_path', 'The path where the lib is installed.', 'bin/'))
@@ -60,12 +60,12 @@ env.Append(CCFLAGS=["-fmodules", "-fcxx-modules"])
 
 if env['simulator']:
     sdk_name = 'iphonesimulator'
-    env.Append(CCFLAGS=['-mios-simulator-version-min=10.0'])
-    env.Append(LINKFLAGS=["-mios-simulator-version-min=10.0"])
+    env.Append(CCFLAGS=['-mios-simulator-version-min=12.0'])
+    env.Append(LINKFLAGS=["-mios-simulator-version-min=12.0"])
 else:
     sdk_name = 'iphoneos'
-    env.Append(CCFLAGS=['-miphoneos-version-min=10.0'])
-    env.Append(LINKFLAGS=["-miphoneos-version-min=10.0"])
+    env.Append(CCFLAGS=['-miphoneos-version-min=12.0'])
+    env.Append(LINKFLAGS=["-miphoneos-version-min=12.0"])
 
 try:
     sdk_path = decode_utf8(subprocess.check_output(['xcrun', '--sdk', sdk_name, '--show-sdk-path']).strip())
@@ -90,9 +90,6 @@ env.Prepend(CXXFLAGS=[
 ])
 env.Append(LINKFLAGS=["-arch", env['arch'], '-isysroot', sdk_path, '-F' + sdk_path])
 
-if env['arch'] == 'armv7':
-    env.Prepend(CXXFLAGS=['-fno-aligned-allocation'])
-
 if env['version'] == '3.x':
     env.Prepend(CFLAGS=['-std=gnu11'])
     env.Prepend(CXXFLAGS=['-DGLES_ENABLED', '-std=gnu++14'])
@@ -110,8 +107,7 @@ if env['version'] == '3.x':
             '-DPTRCALL_ENABLED',
         ])
 
-        if env['arch'] != 'armv7':
-            env.Prepend(CXXFLAGS=['-fomit-frame-pointer'])
+        env.Prepend(CXXFLAGS=['-fomit-frame-pointer'])
     else:
         env.Prepend(CXXFLAGS=[
             '-O2', '-ftree-vectorize',
@@ -119,8 +115,7 @@ if env['version'] == '3.x':
             '-DPTRCALL_ENABLED',
         ])
 
-        if env['arch'] != 'armv7':
-            env.Prepend(CXXFLAGS=['-fomit-frame-pointer'])
+        env.Prepend(CXXFLAGS=['-fomit-frame-pointer'])
 elif env['version'] == '4.0':
     env.Prepend(CFLAGS=['-std=gnu11'])
     env.Prepend(CXXFLAGS=['-DVULKAN_ENABLED', '-std=gnu++17'])
@@ -137,16 +132,14 @@ elif env['version'] == '4.0':
             '-DNDEBUG', '-DNS_BLOCK_ASSERTIONS=1', '-DDEBUG_ENABLED',
         ])
 
-        if env['arch'] != 'armv7':
-            env.Prepend(CXXFLAGS=['-fomit-frame-pointer'])
+        env.Prepend(CXXFLAGS=['-fomit-frame-pointer'])
     else:
         env.Prepend(CXXFLAGS=[
             '-O2', '-ftree-vectorize',
             '-DNDEBUG', '-DNS_BLOCK_ASSERTIONS=1',
         ])
 
-        if env['arch'] != 'armv7':
-            env.Prepend(CXXFLAGS=['-fomit-frame-pointer'])            
+        env.Prepend(CXXFLAGS=['-fomit-frame-pointer'])            
 else:
     print("No valid version to set flags for.")
     quit();
