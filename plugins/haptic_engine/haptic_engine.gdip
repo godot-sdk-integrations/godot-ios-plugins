@@ -1,0 +1,17 @@
+[config]
+name="HapticEngine"
+binary="haptic_engine.xcframework"
+
+initialization="haptic_engine_init"
+deinitialization="haptic_engine_deinit"
+
+[dependencies]
+linked=[]
+embedded=[]
+system=[]
+
+capabilities=[]
+
+files=[]
+
+[plist]
