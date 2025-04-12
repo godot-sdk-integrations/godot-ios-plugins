@@ -245,6 +245,7 @@ typedef PoolVector<uint8_t> GodotUInt8Vector;
 
 		//TODO: this is correct for the camera on the back, I have a feeling this needs to be inversed for the camera on the front!
 		feed->set_transform(display_transform);
+		feed->emit_signal("frame_changed");
 	}
 
 	// and unlock
