@@ -33,7 +33,7 @@
 
 #include "core/version.h"
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 #include "core/io/image.h"
 #include "core/object/object.h"
 #else

@@ -37,7 +37,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import <UIKit/UIKit.h>
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 typedef Vector<uint8_t> GodotUInt8Vector;
 #else
 typedef PoolVector<uint8_t> GodotUInt8Vector;
@@ -179,7 +179,7 @@ typedef PoolVector<uint8_t> GodotUInt8Vector;
 				img_data[0].resize(new_width * new_height);
 			}
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 			uint8_t *w = img_data[0].ptrw();
 			memcpy(w, dataY, new_width * new_height);
 			img[0].instantiate();
@@ -204,7 +204,7 @@ typedef PoolVector<uint8_t> GodotUInt8Vector;
 			}
 
 			///TODO GLES2 doesn't support FORMAT_RG8, need to do some form of conversion
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 			uint8_t *w = img_data[1].ptrw();
 			memcpy(w, dataCbCr, 2 * new_width * new_height);
 			img[1].instantiate();
@@ -416,7 +416,7 @@ void CameraIOS::update_feeds() {
 
 		if (!found) {
 			Ref<CameraFeedIOS> newfeed;
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 			newfeed.instantiate();
 #else
 			newfeed.instance();

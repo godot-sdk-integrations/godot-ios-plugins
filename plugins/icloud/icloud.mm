@@ -30,7 +30,7 @@
 
 #include "icloud.h"
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 #import "platform/ios/app_delegate.h"
 #else
 #import "platform/iphone/app_delegate.h"
@@ -38,7 +38,7 @@
 
 #import <Foundation/Foundation.h>
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 typedef PackedByteArray GodotByteArray;
 #define GODOT_FLOAT_VARIANT_TYPE Variant::FLOAT
 #define GODOT_BYTE_ARRAY_VARIANT_TYPE Variant::PACKED_BYTE_ARRAY
@@ -89,7 +89,7 @@ Variant nsobject_to_variant(NSObject *object) {
 		if ([data length] > 0) {
 			ret.resize([data length]);
 			{
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 				// PackedByteArray::Write w = ret.write();
 				memcpy((void *)ret.ptr(), [data bytes], [data length]);
 #else
@@ -197,7 +197,7 @@ NSObject *variant_to_nsobject(Variant v) {
 		GodotByteArray arr = v;
 		NSData *result;
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 		result = [NSData dataWithBytes:arr.ptr() length:arr.size()];
 #else
 		GodotByteArray::Read r = arr.read();

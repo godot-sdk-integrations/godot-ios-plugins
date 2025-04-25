@@ -31,7 +31,7 @@
 #import "apn_plugin.h"
 #import "apn.h"
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 #import "core/config/engine.h"
 #else
 #import "core/engine.h"

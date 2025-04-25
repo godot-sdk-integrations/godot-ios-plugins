@@ -33,7 +33,7 @@
 #import <Foundation/Foundation.h>
 #import <StoreKit/StoreKit.h>
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 typedef PackedStringArray GodotStringArray;
 typedef PackedFloat32Array GodotFloatArray;
 #else

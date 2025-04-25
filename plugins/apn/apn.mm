@@ -32,7 +32,7 @@
 
 #import <Foundation/Foundation.h>
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 #include "core/object/class_db.h"
 #include "core/config/project_settings.h"
 #else

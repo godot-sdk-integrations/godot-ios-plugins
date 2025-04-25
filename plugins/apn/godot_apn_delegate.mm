@@ -34,7 +34,7 @@
 
 #import "godot_user_notification_delegate.h"
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 #import "platform/ios/godot_app_delegate.h"
 #else
 #import "platform/iphone/godot_app_delegate.h"

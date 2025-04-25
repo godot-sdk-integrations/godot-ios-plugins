@@ -33,7 +33,7 @@
 #import <Foundation/Foundation.h>
 #import <Photos/Photos.h>
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 #import "platform/ios/app_delegate.h"
 #import "platform/ios/view_controller.h"
 #else
@@ -188,7 +188,7 @@ PhotoPicker *instance = NULL;
 			if (data) {
 				Ref<Image> img;
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 				Vector<uint8_t> img_data;
 				img_data.resize(length);
 				uint8_t* w = img_data.ptrw();

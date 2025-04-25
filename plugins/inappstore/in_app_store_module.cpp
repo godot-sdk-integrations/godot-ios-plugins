@@ -32,7 +32,7 @@
 
 #include "core/version.h"
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 #include "core/config/engine.h"
 #else
 #include "core/engine.h"

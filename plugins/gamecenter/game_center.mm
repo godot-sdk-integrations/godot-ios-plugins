@@ -32,7 +32,7 @@
 
 #import "game_center_delegate.h"
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 #import "platform/ios/app_delegate.h"
 #import "platform/ios/view_controller.h"
 #else
@@ -42,7 +42,7 @@
 
 #import <GameKit/GameKit.h>
 
-#if VERSION_MAJOR == 4
+#if VERSION_MAJOR >= 4
 typedef PackedStringArray GodotStringArray;
 typedef PackedInt32Array GodotIntArray;
 typedef PackedFloat32Array GodotFloatArray;
