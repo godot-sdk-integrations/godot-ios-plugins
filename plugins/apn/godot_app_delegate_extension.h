@@ -31,15 +31,15 @@
 #include "core/version.h"
 
 #if VERSION_MAJOR == 4
-#import "platform/ios/godot_app_delegate.h"
+#import "drivers/apple_embedded/godot_app_delegate.h"
 #else
 #import "platform/iphone/godot_app_delegate.h"
 #endif
 
 #if VERSION_MAJOR == 4 && VERSION_MINOR >= 4
-@interface GodotApplicationDelegate (PushNotifications)
+@interface GDTApplicationDelegate (PushNotifications)
 #else
-@interface GodotApplicalitionDelegate (PushNotifications)
+@interface GDTApplicationDelegate (PushNotifications)
 #endif
 
 @end

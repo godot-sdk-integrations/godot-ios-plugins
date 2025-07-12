@@ -28,25 +28,24 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#import "godot_apn_delegate.h"
 
 #include "apn.h"
-
+#import "godot_apn_delegate.h"
 #import "godot_user_notification_delegate.h"
 
 #if VERSION_MAJOR == 4
-#import "platform/ios/godot_app_delegate.h"
+#import "drivers/apple_embedded/godot_app_delegate.h"
 #else
-#import "platform/iphone/godot_app_delegate.h"
+#import "godot_app_delegate.h"
 #endif
 
 struct APNSInitializer {
 
 	APNSInitializer() {
 #if VERSION_MAJOR == 4 && VERSION_MINOR >= 4
-		[GodotApplicationDelegate addService:[GodotAPNAppDelegate shared]];
+		[GDTApplicationDelegate addService:[GodotAPNAppDelegate shared]];
 #else
-		[GodotApplicalitionDelegate addService:[GodotAPNAppDelegate shared]];
+		[GDTApplicationDelegate addService:[GodotAPNAppDelegate shared]];
 #endif
 	}
 };
@@ -94,7 +93,7 @@ static APNSInitializer initializer;
 	}
 
 	String device_token;
-	device_token.parse_utf8([[token copy] UTF8String]);
+	device_token.append_utf8([[token copy] UTF8String]);
 
 	APNPlugin::get_singleton()->update_device_token(device_token);
 }

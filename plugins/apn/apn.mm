@@ -29,6 +29,7 @@
 /*************************************************************************/
 
 #include "apn.h"
+#import "godot_apn_delegate.h"
 
 #import <Foundation/Foundation.h>
 
@@ -40,7 +41,7 @@
 #include "core/project_settings.h"
 #endif
 
-#import "godot_apn_delegate.h"
+#import "drivers/apple_embedded/godot_app_delegate.h"
 
 static APNPlugin *singleton;
 

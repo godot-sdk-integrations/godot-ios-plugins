@@ -31,10 +31,10 @@
 #include "godot_app_delegate_extension.h"
 
 #if VERSION_MAJOR == 4 && VERSION_MINOR >= 4
-@implementation GodotApplicationDelegate (PushNotifications)
+@implementation GDTApplicationDelegate (PushNotifications)
 
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
-	for (ApplicationDelegateService *service in GodotApplicationDelegate.services) {
+	for (GDTAppDelegateServiceProtocol *service in GDTApplicationDelegate.services) {
 		if (![service respondsToSelector:_cmd]) {
 			continue;
 		}
@@ -44,7 +44,7 @@
 }
 
 - (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
-	for (ApplicationDelegateService *service in GodotApplicationDelegate.services) {
+	for (GDTAppDelegateServiceProtocol *service in GDTApplicationDelegate.services) {
 		if (![service respondsToSelector:_cmd]) {
 			continue;
 		}
@@ -54,7 +54,7 @@
 }
 
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult result))completionHandler {
-	for (ApplicationDelegateService *service in GodotApplicationDelegate.services) {
+	for (GDTAppDelegateServiceProtocol *service in GDTApplicationDelegate.services) {
 		if (![service respondsToSelector:_cmd]) {
 			continue;
 		}
@@ -69,10 +69,10 @@
 
 #else
 
-@implementation GodotApplicalitionDelegate (PushNotifications)
+@implementation GDTApplicationDelegate (PushNotifications)
 
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
-	for (ApplicationDelegateService *service in GodotApplicalitionDelegate.services) {
+	for (GDTAppDelegateServiceProtocol *service in GDTApplicationDelegate.services) {
 		if (![service respondsToSelector:_cmd]) {
 			continue;
 		}
@@ -82,7 +82,7 @@
 }
 
 - (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
-	for (ApplicationDelegateService *service in GodotApplicalitionDelegate.services) {
+	for (GDTAppDelegateServiceProtocol *service in GDTApplicationDelegate.services) {
 		if (![service respondsToSelector:_cmd]) {
 			continue;
 		}
@@ -92,7 +92,7 @@
 }
 
 - (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo fetchCompletionHandler:(void (^)(UIBackgroundFetchResult result))completionHandler {
-	for (ApplicationDelegateService *service in GodotApplicalitionDelegate.services) {
+	for (GDTAppDelegateServiceProtocol *service in GDTApplicationDelegate.services) {
 		if (![service respondsToSelector:_cmd]) {
 			continue;
 		}
