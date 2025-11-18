@@ -51,26 +51,39 @@ scons platform=ios target=debug
 You don't have to wait for full engine compilation, as header files are generated first.
 Once the actual compilation starts, you can stop this command by pressing <kbd>Ctrl + C</kbd>.
 
-- Run the command below to generate an `.a` static library for chosen target:
+- Run the command below to generate a `.dylib` dynamic library for chosen target:
 
+**For Godot 3.x:**
 ```bash
-scons target=<debug|release|release_debug> arch=<arch> simulator=<no|yes> plugin=<plugin_name> version=<3.x|4.0>
+scons target=<debug|release|release_debug> arch=<arch> simulator=<no|yes> plugin=<plugin_name> version=3.x
 ```
 
-**Note:** Godot's official `debug` export templates are compiled with the `release_debug` target, *not* the `debug` target.
+**For Godot 4.x:**
+```bash
+scons target=<template_debug|template_release> arch=<arch> simulator=<no|yes> plugin=<plugin_name> version=4.0
+```
 
-## Building a `.a` library
+**Note:** Godot's official `debug` export templates are compiled with the `release_debug` target (Godot 3.x) or `template_debug` target (Godot 4.x), *not* the `debug` target.
 
-- Run `./scripts/generate_static_library.sh <plugin_name> <debug|release|release_debug> <godot_version>`
-  to generate `fat` static library with specific configuration.
-- The result `.a` binary will be stored in the `bin/` folder.
+## Building a `.dylib` library
+
+- Run the scons command above to generate dynamic libraries with specific configuration.
+- The result `.dylib` binary will be stored in the `bin/` folder.
 
 ## Building a `.xcframework` library
 
-- Run `./scripts/generate_xcframework.sh <plugin_name> <debug|release|release_debug> <godot_version>`
-  to generate `xcframework` with specific configuration.
-  `xcframework` allows plugin to support both `arm64` device and `arm64` simulator.
-- The result `.xcframework` will be stored in the `bin/` folder as well as intermidiate `.a` binaries.
+**For Godot 3.x:**
+```bash
+./scripts/generate_xcframework.sh <plugin_name> <debug|release|release_debug> 3.x
+```
+
+**For Godot 4.x:**
+```bash
+./scripts/generate_xcframework.sh <plugin_name> <template_debug|template_release> 4.0
+```
+
+The `xcframework` allows plugin to support both `arm64` device and `arm64` simulator.
+The result `.xcframework` will be stored in the `bin/` folder as well as intermediate `.dylib` binaries.
 
 ## Documentation
 
