@@ -9,69 +9,77 @@ the project from the editor, so you need to export your project to test your cha
 
 ## Instructions
 
-- Clone this repository and its submodules:
+### Step 1: Clone repository and obtain header files
+
+There are two ways to obtain header files:
+- Option A: Use pre-extracted headers provided on the [Releases page](https://github.com/godotengine/godot-ios-plugins/releases). If the version you need is missing, you'll have to generate them yourself.
+- Option B: Generate header files yourself.
+
+#### Option A: Using pre-extracted headers
+
+First, clone this repository without submodules.
+```bash
+git clone https://github.com/godotengine/godot-ios-plugins.git
+```
+
+Then place the extracted Godot headers in the `godot/` subfolder.
+
+#### Option B: Generate headers yourself
+
+Clone this repository and its submodules:
 
 ```bash
 git clone --recursive https://github.com/godotengine/godot-ios-plugins.git
 ```
 
-You might have to the update `godot` submodule in case you require latest (unreleased) Godot changes. To do this, run:
+In the `godot` submodule, checkout the [tag](https://github.com/godotengine/godot/tags) that corresponds with the Godot version you are using (e.g., `4.6-stable`).
 
 ```bash
 cd godot
-git fetch
-git checkout origin/<branch you want to use>
+git fetch --tags origin
+git checkout 4.6.0-stable
 ```
 
-- Alternatively, you can use pre-extracted Godot headers that will be provided
-  with release tag on the [Releases page](https://github.com/godotengine/godot-ios-plugins/releases).
-  To do this, clone this repository without submodules:
+Run the compilation command in the `godot` submodule directory.
 
 ```bash
-git clone https://github.com/godotengine/godot-ios-plugins.git
-```
+# Godot 4.x:
+scons platform=ios target=template_debug
 
-Then place the extracted Godot headers in the `godot/` directory.
-If you choose this option, you can skip next the step which generates Godot headers.
-
-- To generate Godot headers, you need to run the compilation command inside the `godot` submodule directory:
-
-### For Godot 3.x:
-
-```bash
+# Godot 3.x:
 scons platform=iphone target=debug
 ```
 
-### For Godot 4.x:
+> [!TIP]
+> You don't have to wait for full engine compilation, as header files are generated first.
+> Once the actual compilation starts, you can stop it by pressing <kbd>Ctrl + C</kbd>.
 
-```bash
-scons platform=ios target=debug
-```
-
-You don't have to wait for full engine compilation, as header files are generated first.
-Once the actual compilation starts, you can stop this command by pressing <kbd>Ctrl + C</kbd>.
-
-- Run the command below to generate an `.a` static library for chosen target:
+From the main repository root folder, run the command below to generate an `.a` static library.
 
 ```bash
 scons target=<debug|release|release_debug> arch=<arch> simulator=<no|yes> plugin=<plugin_name> version=<3.x|4.0>
 ```
 
-**Note:** Godot's official `debug` export templates are compiled with the `release_debug` target, *not* the `debug` target.
+> [!NOTE]
+> Godot's official `debug` export templates are compiled with the `release_debug` target, *not* the `debug` target.
+> Therefore, most users will want to use the `release_debug` target.
 
-## Building a `.a` library
+### Step 2: Build library file(s)
+
+#### Building an `.a` library
 
 - Run `./scripts/generate_static_library.sh <plugin_name> <debug|release|release_debug> <godot_version>`
-  to generate `fat` static library with specific configuration.
+  to generate `fat` static library with a specific configuration.
 - The result `.a` binary will be stored in the `bin/` folder.
 
-## Building a `.xcframework` library
+#### Building an `.xcframework` library
 
 - Run `./scripts/generate_xcframework.sh <plugin_name> <debug|release|release_debug> <godot_version>`
-  to generate `xcframework` with specific configuration.
+  to generate `xcframework` with a specific configuration.
   `xcframework` allows plugin to support both `arm64` device and `arm64` simulator.
 - The result `.xcframework` will be stored in the `bin/` folder as well as intermidiate `.a` binaries.
 
 ## Documentation
 
-Each plugin provides a `README.md` file which contains documentation and examples.
+Each plugin provides a `README.md` file which contains documentation and examples. See also the [official docs](docs.godotengine.org/en/stable/tutorials/platform/ios/plugins_for_ios.html).
+
