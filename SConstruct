@@ -19,7 +19,7 @@ opts = Variables([], ARGUMENTS)
 env = DefaultEnvironment()
 
 # Define our options
-opts.Add(EnumVariable('target', "Compilation target", 'debug', ['debug', 'release', "release_debug"]))
+opts.Add(EnumVariable('target', "Compilation target", 'debug', ['debug', 'release', "release_debug", 'template_debug', 'template_release']))
 opts.Add(EnumVariable('arch', "Compilation Architecture", '', ['', 'arm64', 'x86_64']))
 opts.Add(BoolVariable('simulator', "Compilation platform", 'no'))
 opts.Add(BoolVariable('use_llvm', "Use the LLVM / Clang compiler", 'no'))
@@ -120,11 +120,11 @@ elif env['version'] == '4.0':
     env.Prepend(CFLAGS=['-std=gnu11'])
     env.Prepend(CXXFLAGS=['-DVULKAN_ENABLED', '-std=gnu++17'])
 
-    if env['target'] == 'debug':
+    if env['target'] in ['debug', 'template_debug']:
         env.Prepend(CXXFLAGS=[
-            '-gdwarf-2', '-O0', 
-            '-DDEBUG_MEMORY_ALLOC', '-DDISABLE_FORCED_INLINE', 
-            '-D_DEBUG', '-DDEBUG=1', '-DDEBUG_ENABLED', 
+            '-gdwarf-2', '-O0',
+            '-DDEBUG_MEMORY_ALLOC', '-DDISABLE_FORCED_INLINE',
+            '-D_DEBUG', '-DDEBUG=1', '-DDEBUG_ENABLED',
         ])
     elif env['target'] == 'release_debug':
         env.Prepend(CXXFLAGS=[
@@ -167,10 +167,21 @@ sources = Glob('plugins/' + env['plugin'] + '/*.cpp')
 sources.append(Glob('plugins/' + env['plugin'] + '/*.mm'))
 sources.append(Glob('plugins/' + env['plugin'] + '/*.m'))
 
-# lib<plugin>.<arch>-<simulator|ios>.<release|debug|release_debug>.a
+# lib<plugin>.<arch>-<simulator|ios>.<release|debug|release_debug>.dylib
+# Normalize target name for output (map Godot 4.x names to 3.x equivalents)
+target_name = env["target"]
+if target_name == "template_debug":
+    target_name = "debug"
+elif target_name == "template_release":
+    target_name = "release"
+
 library_platform = env["arch"] + "-" + ("simulator" if env["simulator"] else "ios")
-library_name = env['plugin'] + "." + library_platform + "." + env["target"] + ".a"
-library = env.StaticLibrary(target=env['target_path'] + library_name, source=sources)
+library_name = env['plugin'] + "." + library_platform + "." + target_name + ".dylib"
+
+# Add linker flags for dynamic library
+env.Append(LINKFLAGS=['-undefined', 'dynamic_lookup'])
+
+library = env.SharedLibrary(target=env['target_path'] + library_name, source=sources)
 
 Default(library)
 
