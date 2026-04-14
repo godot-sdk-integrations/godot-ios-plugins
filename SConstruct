@@ -58,14 +58,25 @@ if env['version'] == '':
 # Enable Obj-C modules
 env.Append(CCFLAGS=["-fmodules", "-fcxx-modules"])
 
-if env['simulator']:
-    sdk_name = 'iphonesimulator'
-    env.Append(CCFLAGS=['-mios-simulator-version-min=12.0'])
-    env.Append(LINKFLAGS=["-mios-simulator-version-min=12.0"])
+if env['version'] == '4.0':
+    if env['simulator']:
+        sdk_name = 'iphonesimulator'
+        env.Append(CCFLAGS=['-mios-simulator-version-min=13.0'])
+        env.Append(LINKFLAGS=["-mios-simulator-version-min=13.0"])
+    else:
+        sdk_name = 'iphoneos'
+        env.Append(CCFLAGS=['-miphoneos-version-min=13.0'])
+        env.Append(LINKFLAGS=["-miphoneos-version-min=13.0"])
 else:
-    sdk_name = 'iphoneos'
-    env.Append(CCFLAGS=['-miphoneos-version-min=12.0'])
-    env.Append(LINKFLAGS=["-miphoneos-version-min=12.0"])
+    if env['simulator']:
+        sdk_name = 'iphonesimulator'
+        env.Append(CCFLAGS=['-mios-simulator-version-min=12.0'])
+        env.Append(LINKFLAGS=["-mios-simulator-version-min=12.0"])
+    else:
+        sdk_name = 'iphoneos'
+        env.Append(CCFLAGS=['-miphoneos-version-min=12.0'])
+        env.Append(LINKFLAGS=["-miphoneos-version-min=12.0"])
+
 
 try:
     sdk_path = decode_utf8(subprocess.check_output(['xcrun', '--sdk', sdk_name, '--show-sdk-path']).strip())
