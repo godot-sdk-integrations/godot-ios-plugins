@@ -376,7 +376,7 @@ Error InAppStore::request_product_info(Dictionary p_params) {
 	ERR_FAIL_COND_V(!p_params.has("product_ids"), ERR_INVALID_PARAMETER);
 
 	GodotStringArray pids = p_params["product_ids"];
-	printf("************ request product info! %i\n", pids.size());
+	printf("************ request product info! %lli\n", pids.size());
 
 	NSMutableArray *array = [[NSMutableArray alloc] initWithCapacity:pids.size()];
 	for (int i = 0; i < pids.size(); i++) {

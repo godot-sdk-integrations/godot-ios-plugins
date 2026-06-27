@@ -1,7 +1,12 @@
 #!/bin/bash
 set -e
 
-GODOT_PLUGINS="gamecenter inappstore icloud camera arkit apn photo_picker"
+if [[ "$1" == "3.x" ]];
+then
+    GODOT_PLUGINS="gamecenter inappstore icloud camera arkit apn photo_picker"
+else
+    GODOT_PLUGINS="gamecenter inappstore icloud camera apn photo_picker"
+fi
 
 # Compile Plugin
 for lib in $GODOT_PLUGINS; do

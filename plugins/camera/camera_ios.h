@@ -32,9 +32,14 @@
 #define CAMERAIOS_H
 
 #include "core/version.h"
+#if VERSION_MAJOR == 4 && VERSION_MINOR >= 6
+#include "servers/camera/camera_server.h"
+#else
 #include "servers/camera_server.h"
+#endif
 
 class CameraIOS : public CameraServer {
+
 private:
 public:
 	CameraIOS();

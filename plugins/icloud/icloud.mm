@@ -31,7 +31,11 @@
 #include "icloud.h"
 
 #if VERSION_MAJOR == 4
+#if VERSION_MINOR >= 5
+#import "drivers/apple_embedded/godot_app_delegate.h"
+#else
 #import "platform/ios/app_delegate.h"
+#endif
 #else
 #import "platform/iphone/app_delegate.h"
 #endif

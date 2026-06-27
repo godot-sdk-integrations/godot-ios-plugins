@@ -78,7 +78,7 @@ void APNPlugin::register_push_notifications(PushOptions options) {
 		notificationsOptions |= UNAuthorizationOptionSound;
 	}
 
-	[[GodotAPNAppDelegate shared] registerPushNotificationsWithOptions:options];
+	[[GodotAPNAppDelegate shared] registerPushNotificationsWithOptions:notificationsOptions];
 }
 
 void APNPlugin::update_device_token(String token) {

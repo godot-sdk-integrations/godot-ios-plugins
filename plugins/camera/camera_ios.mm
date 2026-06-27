@@ -218,7 +218,11 @@ typedef PoolVector<uint8_t> GodotUInt8Vector;
 		}
 
 		// set our texture...
+#if VERSION_MAJOR == 4 && VERSION_MINOR >= 4
+		feed->set_ycbcr_images(img[0], img[1]);
+#else
 		feed->set_YCbCr_imgs(img[0], img[1]);
+#endif
 
 		// update our matrix to match the orientation, note, before changing anything
 		// here, be aware that the project orientation settings must match your xcode
@@ -253,6 +257,9 @@ typedef PoolVector<uint8_t> GodotUInt8Vector;
 // CameraFeedIOS - Subclass for camera feeds in iOS
 
 class CameraFeedIOS : public CameraFeed {
+#if VERSION_MAJOR == 4 && VERSION_MINOR >= 5
+GDSOFTCLASS(CameraFeedIOS, CameraFeed);
+#endif
 private:
 	AVCaptureDevice *device;
 	MyCaptureSession *capture_session;
@@ -266,8 +273,13 @@ public:
 
 	void set_device(AVCaptureDevice *p_device);
 
+#if VERSION_MAJOR == 4 && VERSION_MINOR >= 5
+	bool activate_feed() override;
+	void deactivate_feed() override;
+#else
 	bool activate_feed();
 	void deactivate_feed();
+#endif
 };
 
 AVCaptureDevice *CameraFeedIOS::get_device() const {

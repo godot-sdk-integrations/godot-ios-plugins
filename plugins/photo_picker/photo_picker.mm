@@ -34,8 +34,16 @@
 #import <Photos/Photos.h>
 
 #if VERSION_MAJOR == 4
+#if VERSION_MINOR >= 6
+#import "drivers/apple_embedded/godot_app_delegate.h"
+#import "drivers/apple_embedded/godot_view_controller.h"
+#elif VERSION_MINOR >= 5
+#import "drivers/apple_embedded/godot_app_delegate.h"
+#import "drivers/apple_embedded/view_controller.h"
+#else
 #import "platform/ios/app_delegate.h"
 #import "platform/ios/view_controller.h"
+#endif
 #else
 #import "platform/iphone/app_delegate.h"
 #import "platform/iphone/view_controller.h"
