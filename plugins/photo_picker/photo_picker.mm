@@ -35,6 +35,7 @@
 
 #if VERSION_MAJOR == 4
 #if VERSION_MINOR >= 6
+#import "drivers/apple_embedded/app_delegate_service.h"
 #import "drivers/apple_embedded/godot_app_delegate.h"
 #import "drivers/apple_embedded/godot_view_controller.h"
 #elif VERSION_MINOR >= 5
@@ -63,7 +64,13 @@ PhotoPicker *instance = NULL;
 	dispatch_async(dispatch_get_main_queue(), ^{
 		_strongify(self);
 
+#if VERSION_MAJOR == 4 && VERSION_MINOR >= 6
+		// Godot 4.6 hosts the engine view controller inside a SwiftUI WindowGroup,
+		// so the app delegate no longer exposes a window/rootViewController.
+		UIViewController *root_controller = [GDTAppDelegateService viewController];
+#else
 		UIViewController *root_controller = [[UIApplication sharedApplication] delegate].window.rootViewController;
+#endif
 
 		if (!root_controller) {
 			return;
