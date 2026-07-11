@@ -63,6 +63,52 @@ typedef PoolRealArray GodotFloatArray;
 GameCenter *GameCenter::instance = NULL;
 GodotGameCenterDelegate *gameCenterDelegate = nil;
 
+static UIViewController *godot_game_center_get_root_view_controller() {
+	UIViewController *root_controller = nil;
+
+	if (@available(iOS 13.0, *)) {
+		NSSet<UIScene *> *connected_scenes = [[UIApplication sharedApplication] connectedScenes];
+		for (UIScene *scene in connected_scenes) {
+			if (![scene isKindOfClass:[UIWindowScene class]]) {
+				continue;
+			}
+			UIWindowScene *window_scene = (UIWindowScene *)scene;
+			if (window_scene.activationState != UISceneActivationStateForegroundActive) {
+				continue;
+			}
+			for (UIWindow *window in window_scene.windows) {
+				if (!window.isKeyWindow) {
+					continue;
+				}
+				root_controller = window.rootViewController;
+				break;
+			}
+			if (root_controller) {
+				break;
+			}
+			for (UIWindow *window in window_scene.windows) {
+				if (window.rootViewController) {
+					root_controller = window.rootViewController;
+					break;
+				}
+			}
+			if (root_controller) {
+				break;
+			}
+		}
+	}
+
+	if (!root_controller) {
+		root_controller = [[UIApplication sharedApplication] delegate].window.rootViewController;
+	}
+
+	while (root_controller.presentedViewController) {
+		root_controller = root_controller.presentedViewController;
+	}
+
+	return root_controller;
+}
+
 void GameCenter::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("authenticate"), &GameCenter::authenticate);
 	ClassDB::bind_method(D_METHOD("is_authenticated"), &GameCenter::is_authenticated);
@@ -88,7 +134,7 @@ Error GameCenter::authenticate() {
 	GKLocalPlayer *player = [GKLocalPlayer localPlayer];
 	ERR_FAIL_COND_V(![player respondsToSelector:@selector(authenticateHandler)], ERR_UNAVAILABLE);
 
-	UIViewController *root_controller = [[UIApplication sharedApplication] delegate].window.rootViewController;
+	UIViewController *root_controller = godot_game_center_get_root_view_controller();
 	ERR_FAIL_COND_V(!root_controller, FAILED);
 
 	// This handler is called several times.  First when the view needs to be shown, then again
@@ -320,7 +366,7 @@ Error GameCenter::show_game_center(Dictionary p_params) {
 	GKGameCenterViewController *controller = [[GKGameCenterViewController alloc] init];
 	ERR_FAIL_COND_V(!controller, FAILED);
 
-	UIViewController *root_controller = [[UIApplication sharedApplication] delegate].window.rootViewController;
+	UIViewController *root_controller = godot_game_center_get_root_view_controller();
 	ERR_FAIL_COND_V(!root_controller, FAILED);
 
 	controller.gameCenterDelegate = gameCenterDelegate;
