@@ -35,6 +35,9 @@
 
 #if VERSION_MAJOR == 4
 #include "core/io/image.h"
+#if VERSION_MINOR >= 7
+#include "core/object/class_db.h"
+#endif
 #include "core/object/object.h"
 #else
 #include "core/image.h"

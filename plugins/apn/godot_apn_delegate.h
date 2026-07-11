@@ -31,7 +31,15 @@
 #import <UIKit/UIKit.h>
 #import <UserNotifications/UserNotifications.h>
 
+#include "core/version.h"
+
+#if VERSION_MAJOR == 4 && VERSION_MINOR >= 7
+#import "drivers/apple_embedded/godot_app_delegate.h"
+
+@interface GodotAPNAppDelegate : GDTAppDelegateServiceProtocol
+#else
 @interface GodotAPNAppDelegate : NSObject <UIApplicationDelegate>
+#endif
 
 + (instancetype)shared;
 - (void)registerPushNotificationsWithOptions:(UNAuthorizationOptions)options;

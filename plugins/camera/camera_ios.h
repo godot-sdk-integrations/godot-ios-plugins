@@ -32,6 +32,9 @@
 #define CAMERAIOS_H
 
 #include "core/version.h"
+#if VERSION_MAJOR == 4 && VERSION_MINOR >= 7
+#warning "Module Deprecated. Camera module is now part of the engine."
+#endif
 #if VERSION_MAJOR == 4 && VERSION_MINOR >= 6
 #include "servers/camera/camera_server.h"
 #else
