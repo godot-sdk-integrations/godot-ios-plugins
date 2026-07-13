@@ -33,7 +33,9 @@
 #include "camera_ios.h"
 
 void register_camera_types() {
+#if !(VERSION_MAJOR == 4 && VERSION_MINOR >= 7)
 	CameraServer::make_default<CameraIOS>();
+#endif
 }
 
 void unregister_camera_types() {
