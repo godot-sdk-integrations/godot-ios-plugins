@@ -25,7 +25,7 @@ opts.Add(BoolVariable('simulator', "Compilation platform", 'no'))
 opts.Add(BoolVariable('use_llvm', "Use the LLVM / Clang compiler", 'no'))
 opts.Add(PathVariable('target_path', 'The path where the lib is installed.', 'bin/'))
 opts.Add(EnumVariable('plugin', 'Plugin to build', '', ['', 'apn', 'arkit', 'camera', 'icloud', 'gamecenter', 'inappstore', 'photo_picker']))
-opts.Add(EnumVariable('version', 'Godot version to target', '', ['', '3.x', '4.0']))
+opts.Add(EnumVariable('version', 'Godot version to target', '', ['', '3.x', '4.x']))
 
 # Updates the environment with the option variables.
 opts.Update(env)
@@ -116,7 +116,7 @@ if env['version'] == '3.x':
         ])
 
         env.Prepend(CXXFLAGS=['-fomit-frame-pointer'])
-elif env['version'] == '4.0':
+elif env['version'] == '4.x':
     env.Prepend(CFLAGS=['-std=gnu11'])
     env.Prepend(CXXFLAGS=['-DVULKAN_ENABLED', '-std=gnu++17'])
 
@@ -144,7 +144,7 @@ else:
     print("No valid version to set flags for.")
     quit();
 
-if env['version'] == '4.0' and env['plugin'] == 'arkit':
+if env['version'] == '4.x' and env['plugin'] == 'arkit':
     print("'arkit' plugin is 3.x only.")
     quit();
 
