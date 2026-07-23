@@ -138,29 +138,42 @@ bool GameCenter::is_authenticated() {
 
 Error GameCenter::post_score(Dictionary p_score) {
 	ERR_FAIL_COND_V(!p_score.has("score") || !p_score.has("category"), ERR_INVALID_PARAMETER);
-	float score = p_score["score"];
+	int64_t score = p_score["score"];
 	String category = p_score["category"];
+	int64_t context = 0;
+	if (p_score.has("context")) {
+		context = p_score["context"];
+	}
 
 	NSString *cat_str = [[NSString alloc] initWithUTF8String:category.utf8().get_data()];
-	GKScore *reporter = [[GKScore alloc] initWithLeaderboardIdentifier:cat_str];
-	reporter.value = score;
 
-	ERR_FAIL_COND_V([GKScore respondsToSelector:@selector(reportScores)], ERR_UNAVAILABLE);
+	void (^completion_handler)(NSError *) = ^(NSError *error) {
+		Dictionary ret;
+		ret["type"] = "post_score";
+		if (error == nil) {
+			ret["result"] = "ok";
+		} else {
+			ret["result"] = "error";
+			ret["error_code"] = (int64_t)error.code;
+			ret["error_description"] = [error.localizedDescription UTF8String];
+		};
 
-	[GKScore reportScores:@[ reporter ]
-			withCompletionHandler:^(NSError *error) {
-				Dictionary ret;
-				ret["type"] = "post_score";
-				if (error == nil) {
-					ret["result"] = "ok";
-				} else {
-					ret["result"] = "error";
-					ret["error_code"] = (int64_t)error.code;
-					ret["error_description"] = [error.localizedDescription UTF8String];
-				};
+		pending_events.push_back(ret);
+	};
 
-				pending_events.push_back(ret);
-			}];
+	// Modern API (iOS 14+) — required for Game Center Challenges auto-matching.
+	// Legacy GKScore.reportScores: is deprecated and does not participate in challenges.
+	if (@available(iOS 14.0, *)) {
+		[GKLeaderboard submitScore:score
+						   context:context
+							player:[GKLocalPlayer local]
+					leaderboardIDs:@[ cat_str ]
+				 completionHandler:completion_handler];
+	} else {
+		GKScore *reporter = [[GKScore alloc] initWithLeaderboardIdentifier:cat_str];
+		reporter.value = score;
+		[GKScore reportScores:@[ reporter ] withCompletionHandler:completion_handler];
+	}
 
 	return OK;
 };
