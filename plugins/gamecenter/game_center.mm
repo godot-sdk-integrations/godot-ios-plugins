@@ -387,10 +387,18 @@ int GameCenter::get_pending_event_count() {
 };
 
 Variant GameCenter::pop_pending_event() {
-	Variant front = pending_events.front()->get();
+	List<Variant>::Element* front = pending_events.front();
+	if (front == nullptr) {
+		Dictionary ret;
+		ret["type"] = "pop_pending_event";
+		ret["result"] = "error";
+		ret["error_code"] = ERR_PARAMETER_RANGE_ERROR;
+		ret["error_description"] = "Range error: There are 0 pending events, use get_pending_event_count() to query the size before calling pop_pending_event().";
+		return ret;
+	}
+	Variant result = front->get();
 	pending_events.pop_front();
-
-	return front;
+	return result;
 };
 
 GameCenter *GameCenter::get_singleton() {
