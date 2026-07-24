@@ -2,6 +2,7 @@
 import os
 import sys
 import subprocess
+import platform
 
 if sys.version_info < (3,):
     def decode_utf8(x):
@@ -35,9 +36,9 @@ if env['use_llvm']:
     env['CC'] = 'clang'
     env['CXX'] = 'clang++'
 
-if env['arch'] == '':
-    print("No valid arch selected.")
-    quit();
+arch = env['arch']
+if arch == '':
+    arch = platform.machine()
 
 if env['plugin'] == '':
     print("No valid plugin selected.")
@@ -82,13 +83,13 @@ env.Append(CCFLAGS=[
     # '-Wextra',
 ])
 
-env.Append(CCFLAGS=['-arch', env['arch'], "-isysroot", "$IOS_SDK_PATH", "-stdlib=libc++", '-isysroot', sdk_path])
+env.Append(CCFLAGS=['-arch', arch, "-isysroot", "$IOS_SDK_PATH", "-stdlib=libc++", '-isysroot', sdk_path])
 env.Append(CCFLAGS=['-DPTRCALL_ENABLED'])
 env.Prepend(CXXFLAGS=[
     '-DNEED_LONG_INT', '-DLIBYUV_DISABLE_NEON', 
     '-DIOS_ENABLED', '-DUNIX_ENABLED', '-DCOREAUDIO_ENABLED'
 ])
-env.Append(LINKFLAGS=["-arch", env['arch'], '-isysroot', sdk_path, '-F' + sdk_path])
+env.Append(LINKFLAGS=["-arch", arch, '-isysroot', sdk_path, '-F' + sdk_path])
 
 if env['version'] == '3.x':
     env.Prepend(CFLAGS=['-std=gnu11'])
@@ -168,7 +169,7 @@ sources.append(Glob('plugins/' + env['plugin'] + '/*.mm'))
 sources.append(Glob('plugins/' + env['plugin'] + '/*.m'))
 
 # lib<plugin>.<arch>-<simulator|ios>.<release|debug|release_debug>.a
-library_platform = env["arch"] + "-" + ("simulator" if env["simulator"] else "ios")
+library_platform = arch + "-" + ("simulator" if env["simulator"] else "ios")
 library_name = env['plugin'] + "." + library_platform + "." + env["target"] + ".a"
 library = env.StaticLibrary(target=env['target_path'] + library_name, source=sources)
 
