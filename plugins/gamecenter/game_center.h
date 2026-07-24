@@ -53,18 +53,30 @@ class GameCenter : public Object {
 	void return_connect_error(const char *p_error_description);
 
 public:
+	// Authentication
+
 	Error authenticate();
 	bool is_authenticated();
 
+	// Leaderboards
+
 	Error post_score(Dictionary p_score);
-	Error award_achievement(Dictionary p_params);
+
+	// Achievements
+
+	Error report_achievement(String identifier, double percent_complete, bool shows_completion_banner);
 	void reset_achievements();
-	void request_achievements();
-	void request_achievement_descriptions();
+	void load_achievements();
+	void load_achievement_descriptions();
+
+	// Native Game Center UI
+
 	Error show_game_center(Dictionary p_params);
 	Error request_identity_verification_signature();
 
 	void game_center_closed();
+
+	// Event Handling
 
 	int get_pending_event_count();
 	Variant pop_pending_event();

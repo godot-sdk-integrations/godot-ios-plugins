@@ -68,16 +68,18 @@ void GameCenter::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("is_authenticated"), &GameCenter::is_authenticated);
 
 	ClassDB::bind_method(D_METHOD("post_score"), &GameCenter::post_score);
-	ClassDB::bind_method(D_METHOD("award_achievement", "achievement"), &GameCenter::award_achievement);
+	ClassDB::bind_method(D_METHOD("report_achievement", "identifier", "percent_complete", "shows_completion_banner"), &GameCenter::report_achievement);
 	ClassDB::bind_method(D_METHOD("reset_achievements"), &GameCenter::reset_achievements);
-	ClassDB::bind_method(D_METHOD("request_achievements"), &GameCenter::request_achievements);
-	ClassDB::bind_method(D_METHOD("request_achievement_descriptions"), &GameCenter::request_achievement_descriptions);
+	ClassDB::bind_method(D_METHOD("load_achievements"), &GameCenter::load_achievements);
+	ClassDB::bind_method(D_METHOD("load_achievement_descriptions"), &GameCenter::load_achievement_descriptions);
 	ClassDB::bind_method(D_METHOD("show_game_center"), &GameCenter::show_game_center);
 	ClassDB::bind_method(D_METHOD("request_identity_verification_signature"), &GameCenter::request_identity_verification_signature);
 
 	ClassDB::bind_method(D_METHOD("get_pending_event_count"), &GameCenter::get_pending_event_count);
 	ClassDB::bind_method(D_METHOD("pop_pending_event"), &GameCenter::pop_pending_event);
 };
+
+// Authentication
 
 Error GameCenter::authenticate() {
 	//if this class isn't available, game center isn't implemented
@@ -136,6 +138,8 @@ bool GameCenter::is_authenticated() {
 	return authenticated;
 };
 
+// Leaderboards
+
 Error GameCenter::post_score(Dictionary p_score) {
 	ERR_FAIL_COND_V(!p_score.has("score") || !p_score.has("category"), ERR_INVALID_PARAMETER);
 	float score = p_score["score"];
@@ -165,118 +169,83 @@ Error GameCenter::post_score(Dictionary p_score) {
 	return OK;
 };
 
-Error GameCenter::award_achievement(Dictionary p_params) {
-	ERR_FAIL_COND_V(!p_params.has("name") || !p_params.has("progress"), ERR_INVALID_PARAMETER);
-	String name = p_params["name"];
-	float progress = p_params["progress"];
+// Achievements
 
-	NSString *name_str = [[NSString alloc] initWithUTF8String:name.utf8().get_data()];
-	GKAchievement *achievement = [[GKAchievement alloc] initWithIdentifier:name_str];
+Error GameCenter::report_achievement(String identifier, double percent_complete, bool shows_completion_banner) {
+	NSString *identifier_nsstring = [[NSString alloc] initWithUTF8String: identifier.utf8().get_data()];
+	GKAchievement *achievement = [[GKAchievement alloc] initWithIdentifier: identifier_nsstring];
 	ERR_FAIL_COND_V(!achievement, FAILED);
 
-	ERR_FAIL_COND_V([GKAchievement respondsToSelector:@selector(reportAchievements)], ERR_UNAVAILABLE);
+	achievement.percentComplete = percent_complete;
+	achievement.showsCompletionBanner = shows_completion_banner;
 
-	achievement.percentComplete = progress;
-	achievement.showsCompletionBanner = NO;
-	if (p_params.has("show_completion_banner")) {
-		achievement.showsCompletionBanner = p_params["show_completion_banner"] ? YES : NO;
-	}
-
-	[GKAchievement reportAchievements:@[ achievement ]
-				withCompletionHandler:^(NSError *error) {
+	[GKAchievement reportAchievements: @[ achievement ]
+				withCompletionHandler: ^(NSError *error) {
 					Dictionary ret;
-					ret["type"] = "award_achievement";
+					ret["type"] = "report_achievement";
 					if (error == nil) {
 						ret["result"] = "ok";
 					} else {
 						ret["result"] = "error";
 						ret["error_code"] = (int64_t)error.code;
-					};
-
+						ret["error_description"] = [error.localizedDescription UTF8String];
+					}
 					pending_events.push_back(ret);
 				}];
-
 	return OK;
-};
+}
 
-void GameCenter::request_achievement_descriptions() {
-	[GKAchievementDescription loadAchievementDescriptionsWithCompletionHandler:^(NSArray *descriptions, NSError *error) {
+void GameCenter::load_achievements() {
+	[GKAchievement loadAchievementsWithCompletionHandler:^(NSArray<GKAchievement *> *achievements, NSError *error) {
 		Dictionary ret;
-		ret["type"] = "achievement_descriptions";
+		ret["type"] = "load_achievements";
+		NSISO8601DateFormatter *dateFormatter = [[NSISO8601DateFormatter alloc] init];
 		if (error == nil) {
 			ret["result"] = "ok";
-			GodotStringArray names;
-			GodotStringArray titles;
-			GodotStringArray unachieved_descriptions;
-			GodotStringArray achieved_descriptions;
-			GodotIntArray maximum_points;
-			Array hidden;
-			Array replayable;
-
-			for (NSUInteger i = 0; i < [descriptions count]; i++) {
-
-				GKAchievementDescription *description = [descriptions objectAtIndex:i];
-
-				const char *str = [description.identifier UTF8String];
-				names.push_back(String::utf8(str != NULL ? str : ""));
-
-				str = [description.title UTF8String];
-				titles.push_back(String::utf8(str != NULL ? str : ""));
-
-				str = [description.unachievedDescription UTF8String];
-				unachieved_descriptions.push_back(String::utf8(str != NULL ? str : ""));
-
-				str = [description.achievedDescription UTF8String];
-				achieved_descriptions.push_back(String::utf8(str != NULL ? str : ""));
-
-				maximum_points.push_back(description.maximumPoints);
-
-				hidden.push_back(description.hidden == YES);
-
-				replayable.push_back(description.replayable == YES);
+			Array result_achievements;
+			for (GKAchievement *achievement in achievements) {
+				Dictionary achievement_dict;
+				achievement_dict["identifier"] = String([achievement.identifier UTF8String] ?: "");
+				achievement_dict["percent_complete"] = achievement.percentComplete;
+				achievement_dict["completed"] = achievement.completed == YES;
+				NSString *isoDateString = [dateFormatter stringFromDate:achievement.lastReportedDate];
+				achievement_dict["last_reported_date"] = String([isoDateString UTF8String] ?: "");
+				result_achievements.push_back(achievement_dict);
 			}
-
-			ret["names"] = names;
-			ret["titles"] = titles;
-			ret["unachieved_descriptions"] = unachieved_descriptions;
-			ret["achieved_descriptions"] = achieved_descriptions;
-			ret["maximum_points"] = maximum_points;
-			ret["hidden"] = hidden;
-			ret["replayable"] = replayable;
-
+			ret["achievements"] = result_achievements;
 		} else {
 			ret["result"] = "error";
 			ret["error_code"] = (int64_t)error.code;
+			ret["error_description"] = [error.localizedDescription UTF8String];
 		};
 
 		pending_events.push_back(ret);
 	}];
 };
 
-void GameCenter::request_achievements() {
-	[GKAchievement loadAchievementsWithCompletionHandler:^(NSArray *achievements, NSError *error) {
+void GameCenter::load_achievement_descriptions() {
+	[GKAchievementDescription loadAchievementDescriptionsWithCompletionHandler:^(NSArray<GKAchievementDescription *> *descriptions, NSError *error) {
 		Dictionary ret;
-		ret["type"] = "achievements";
+		ret["type"] = "load_achievement_descriptions";
 		if (error == nil) {
 			ret["result"] = "ok";
-			GodotStringArray names;
-			GodotFloatArray percentages;
-
-			for (NSUInteger i = 0; i < [achievements count]; i++) {
-
-				GKAchievement *achievement = [achievements objectAtIndex:i];
-				const char *str = [achievement.identifier UTF8String];
-				names.push_back(String::utf8(str != NULL ? str : ""));
-
-				percentages.push_back(achievement.percentComplete);
+			Array result_descriptions;
+			for (GKAchievementDescription *description in descriptions) {
+				Dictionary description_dict;
+				description_dict["identifier"] = String([description.identifier UTF8String] ?: "");
+				description_dict["title"] = String([description.title UTF8String] ?: "");
+				description_dict["unachieved_description"] = String([description.unachievedDescription UTF8String] ?: "");
+				description_dict["achieved_description"] = String([description.achievedDescription UTF8String] ?: "");
+				description_dict["maximum_points"] = (int64_t)description.maximumPoints;
+				description_dict["hidden"] = description.hidden == YES;
+				description_dict["replayable"] = description.replayable == YES;
+				result_descriptions.push_back(description_dict);
 			}
-
-			ret["names"] = names;
-			ret["progress"] = percentages;
-
+			ret["descriptions"] = result_descriptions;
 		} else {
 			ret["result"] = "error";
 			ret["error_code"] = (int64_t)error.code;
+			ret["error_description"] = [error.localizedDescription UTF8String];
 		};
 
 		pending_events.push_back(ret);
@@ -292,11 +261,14 @@ void GameCenter::reset_achievements() {
 		} else {
 			ret["result"] = "error";
 			ret["error_code"] = (int64_t)error.code;
+			ret["error_description"] = [error.localizedDescription UTF8String];
 		};
 
 		pending_events.push_back(ret);
 	}];
 };
+
+// Native Game Center UI
 
 Error GameCenter::show_game_center(Dictionary p_params) {
 	ERR_FAIL_COND_V(!NSProtocolFromString(@"GKGameCenterControllerDelegate"), FAILED);
