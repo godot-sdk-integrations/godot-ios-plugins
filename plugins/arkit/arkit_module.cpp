@@ -33,15 +33,20 @@
 #include "arkit_interface.h"
 #include "core/version.h"
 
+#include "core/object/class_db.h"
+
 void register_arkit_types() {
 	// does it make sense to register the class?
 
 	Ref<ARKitInterface> arkit_interface;
-	arkit_interface.instance();
 
 #if VERSION_MAJOR == 4
+	arkit_interface.instantiate();
 	XRServer::get_singleton()->add_interface(arkit_interface);
+	//GDREGISTER_CLASS(ARKitAnchorMesh);
+	ClassDB::register_class<ARKitAnchorMesh>();
 #else
+	arkit_interface.instance();
 	ARVRServer::get_singleton()->add_interface(arkit_interface);
 #endif
 }
