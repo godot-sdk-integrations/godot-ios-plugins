@@ -70,4 +70,4 @@ Values: `PERMISSION_STATUS_UNKNOWN`, `PERMISSION_STATUS_ALLOWED`, `PERMISSION_ST
 ## Signals
 
 `image_picked(Ref<Image> image)` - Called whenever user selects an image from a library or takes a photo.  
-`permission_updated(PhotoPickerPermissionTarget image)` - Called when user changes permission status after `request_permission` is called.
+`permission_updated(PhotoPickerPermissionTarget target, PhotoPickerPermissionStatus status)` - Called when user changes permission status after `request_permission` is called.
