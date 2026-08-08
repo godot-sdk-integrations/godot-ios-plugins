@@ -35,9 +35,13 @@
 
 #if VERSION_MAJOR == 4
 #include "core/object/class_db.h"
+typedef PackedByteArray GodotByteArray;
 #else
 #include "core/object.h"
+typedef PoolByteArray GodotByteArray;
 #endif
+
+class GameCenterSavedGame;
 
 class GameCenter : public Object {
 
@@ -64,7 +68,15 @@ public:
 	Error show_game_center(Dictionary p_params);
 	Error request_identity_verification_signature();
 
+	Error save_game_data(Dictionary p_params);
+	Error fetch_saved_games();
+	Error delete_saved_games(String p_name);
+	Error resolve_conflicting_saved_games(Dictionary p_params);
+
 	void game_center_closed();
+	void game_center_saved_game_loaded(GameCenterSavedGame *saved_game, const GodotByteArray& data, int64_t error_code, const char *error_description);
+	void player_has_conflicting_saved_games(const Array& saved_games);
+	void player_did_modify_saved_game(GameCenterSavedGame *saved_game);
 
 	int get_pending_event_count();
 	Variant pop_pending_event();

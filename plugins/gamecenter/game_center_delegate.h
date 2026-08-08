@@ -30,6 +30,6 @@
 
 #import <GameKit/GameKit.h>
 
-@interface GodotGameCenterDelegate : NSObject <GKGameCenterControllerDelegate>
+@interface GodotGameCenterDelegate : NSObject <GKGameCenterControllerDelegate, GKLocalPlayerListener>
 
 @end

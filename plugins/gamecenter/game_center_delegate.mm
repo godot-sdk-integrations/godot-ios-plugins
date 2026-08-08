@@ -31,6 +31,7 @@
 #import "game_center_delegate.h"
 
 #include "game_center.h"
+#include "game_center_saved_game.h"
 
 @implementation GodotGameCenterDelegate
 
@@ -40,6 +41,22 @@
 		GameCenter::get_singleton()->game_center_closed();
 	}
 	[gameCenterViewController dismissViewControllerAnimated:YES completion:nil];
+}
+
+- (void)player:(GKPlayer *)player hasConflictingSavedGames:(NSArray<GKSavedGame *> *)savedGames {
+	if (GameCenter::get_singleton()) {
+		Array gsaved_games;
+		for (GKSavedGame *savedGame in savedGames) {
+			gsaved_games.append(memnew(GameCenterSavedGame(savedGame)));
+		}
+		GameCenter::get_singleton()->player_has_conflicting_saved_games(gsaved_games);
+	}
+}
+
+- (void)player:(GKPlayer *)player didModifySavedGame:(GKSavedGame *)savedGame {
+	if (GameCenter::get_singleton()) {
+		GameCenter::get_singleton()->player_did_modify_saved_game(memnew(GameCenterSavedGame(savedGame)));
+	}
 }
 
 @end

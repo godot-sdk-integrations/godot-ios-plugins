@@ -31,6 +31,7 @@
 #include "game_center.h"
 
 #import "game_center_delegate.h"
+#import "game_center_saved_game.h"
 
 #if VERSION_MAJOR == 4
 #if VERSION_MINOR >= 6
@@ -50,14 +51,22 @@
 
 #import <GameKit/GameKit.h>
 
+static void *_get_ptr(const GodotByteArray& arr);
+
 #if VERSION_MAJOR == 4
 typedef PackedStringArray GodotStringArray;
 typedef PackedInt32Array GodotIntArray;
 typedef PackedFloat32Array GodotFloatArray;
+static void *_get_ptr(const GodotByteArray& arr) {
+	return (void *) arr.ptr();
+}
 #else
 typedef PoolStringArray GodotStringArray;
 typedef PoolIntArray GodotIntArray;
 typedef PoolRealArray GodotFloatArray;
+static void *_get_ptr(const GodotByteArray& arr) {
+	return (void *) arr.read().ptr();
+}
 #endif
 
 GameCenter *GameCenter::instance = NULL;
@@ -74,6 +83,11 @@ void GameCenter::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("request_achievement_descriptions"), &GameCenter::request_achievement_descriptions);
 	ClassDB::bind_method(D_METHOD("show_game_center"), &GameCenter::show_game_center);
 	ClassDB::bind_method(D_METHOD("request_identity_verification_signature"), &GameCenter::request_identity_verification_signature);
+	
+	ClassDB::bind_method(D_METHOD("save_game_data"), &GameCenter::save_game_data);
+	ClassDB::bind_method(D_METHOD("fetch_saved_games"), &GameCenter::fetch_saved_games);
+	ClassDB::bind_method(D_METHOD("delete_saved_games", "name"), &GameCenter::delete_saved_games);
+	ClassDB::bind_method(D_METHOD("resolve_conflicting_saved_games"), &GameCenter::resolve_conflicting_saved_games);
 
 	ClassDB::bind_method(D_METHOD("get_pending_event_count"), &GameCenter::get_pending_event_count);
 	ClassDB::bind_method(D_METHOD("pop_pending_event"), &GameCenter::pop_pending_event);
@@ -375,10 +389,155 @@ Error GameCenter::request_identity_verification_signature() {
 	return OK;
 };
 
+Error GameCenter::save_game_data(Dictionary p_params) {
+	ERR_FAIL_COND_V(![GKLocalPlayer instancesRespondToSelector:@selector(saveGameData:withName:completionHandler:)], ERR_UNAVAILABLE);
+	ERR_FAIL_COND_V(!p_params.has("name") || !p_params.has("data"), ERR_INVALID_PARAMETER);
+
+	String name = p_params["name"];
+	GodotByteArray data = p_params["data"];
+
+	NSString *nsname = [[NSString alloc] initWithUTF8String:name.utf8().get_data()];
+	NSData *nsdata = [[NSData alloc] initWithBytes:_get_ptr(data) length:data.size()];
+	[GKLocalPlayer.localPlayer saveGameData:nsdata withName:nsname completionHandler:^(GKSavedGame * _Nullable savedGame, NSError * _Nullable error) {
+		Dictionary ret;
+		ret["type"] = "save_game_data";
+		ret["name"] = name;
+		if (savedGame) {
+			ret["result"] = "ok";
+			ret["saved_game"] = memnew(GameCenterSavedGame(savedGame));
+		}
+		else {
+			ret["result"] = "error";
+			ret["error_code"] = (int64_t)error.code;
+			ret["error_description"] = [error.localizedDescription UTF8String];
+		}
+		pending_events.push_back(ret);
+	}];
+
+	return OK;
+}
+
+Error GameCenter::fetch_saved_games() {
+	ERR_FAIL_COND_V(![GKLocalPlayer instancesRespondToSelector:@selector(fetchSavedGamesWithCompletionHandler:)], ERR_UNAVAILABLE);
+
+	[GKLocalPlayer.localPlayer fetchSavedGamesWithCompletionHandler:^(NSArray<GKSavedGame *> * _Nullable savedGames, NSError * _Nullable error) {
+		Dictionary ret;
+		ret["type"] = "fetch_saved_games";
+		if (savedGames) {
+			ret["result"] = "ok";
+			Array array;
+			for (GKSavedGame *savedGame in savedGames) {
+				array.append(memnew(GameCenterSavedGame(savedGame)));
+			}
+			ret["saved_games"] = array;
+		}
+		else {
+			ret["result"] = "error";
+			ret["error_code"] = (int64_t)error.code;
+			ret["error_description"] = [error.localizedDescription UTF8String];
+		}
+		pending_events.push_back(ret);
+	}];
+
+	return OK;
+}
+
+Error GameCenter::delete_saved_games(String p_name) {
+	ERR_FAIL_COND_V(![GKLocalPlayer instancesRespondToSelector:@selector(deleteSavedGamesWithName:completionHandler:)], ERR_UNAVAILABLE);
+
+	NSString *nsname = [[NSString alloc] initWithUTF8String:p_name.utf8().get_data()];
+	[GKLocalPlayer.localPlayer deleteSavedGamesWithName:nsname completionHandler:^(NSError * _Nullable error) {
+		Dictionary ret;
+		ret["type"] = "delete_saved_games";
+		ret["name"] = p_name;
+		if (!error) {
+			ret["result"] = "ok";
+		}
+		else {
+			ret["result"] = "error";
+			ret["error_code"] = (int64_t)error.code;
+			ret["error_description"] = [error.localizedDescription UTF8String];
+		}
+		pending_events.push_back(ret);
+	}];
+
+	return OK;
+}
+
+Error GameCenter::resolve_conflicting_saved_games(Dictionary p_params) {
+	ERR_FAIL_COND_V(![GKLocalPlayer instancesRespondToSelector:@selector(resolveConflictingSavedGames:withData:completionHandler:)], ERR_UNAVAILABLE);
+	ERR_FAIL_COND_V(!p_params.has("saved_games") || !p_params.has("data"), ERR_INVALID_PARAMETER);
+
+	Array saved_games = p_params["saved_games"];
+	GodotByteArray data = p_params["data"];
+
+	NSMutableArray *nssaved_games = [[NSMutableArray alloc] init];
+	for (int i = 0; i < saved_games.size(); i++) {
+		if (GameCenterSavedGame *saved_game = Object::cast_to<GameCenterSavedGame>(saved_games[i])) {
+			[nssaved_games addObject:saved_game->get_saved_game()];
+		}
+	}
+
+	NSData *nsdata = [[NSData alloc] initWithBytes:_get_ptr(data) length:data.size()];
+	[GKLocalPlayer.localPlayer resolveConflictingSavedGames:nssaved_games withData:nsdata completionHandler:^(NSArray<GKSavedGame *> * _Nullable savedGames, NSError * _Nullable error) {
+		Dictionary ret;
+		ret["type"] = "resolve_conflicting_saved_games";
+		if (savedGames) {
+			ret["result"] = "ok";
+			Array array;
+			for (GKSavedGame *savedGame in savedGames) {
+				array.append(memnew(GameCenterSavedGame(savedGame)));
+			}
+			ret["saved_games"] = array;
+		}
+		else {
+			ret["result"] = "error";
+			ret["error_code"] = (int64_t)error.code;
+			ret["error_description"] = [error.localizedDescription UTF8String];
+		}
+		pending_events.push_back(ret);
+	}];
+
+	return OK;
+}
+
 void GameCenter::game_center_closed() {
 	Dictionary ret;
 	ret["type"] = "show_game_center";
 	ret["result"] = "ok";
+	pending_events.push_back(ret);
+}
+
+void GameCenter::game_center_saved_game_loaded(GameCenterSavedGame *saved_game, const GodotByteArray& data, int64_t error_code, const char *error_description) {
+	Dictionary ret;
+	ret["type"] = "saved_game_loaded";
+	ret["name"] = saved_game->get_name();
+	ret["saved_game"] = saved_game;
+	if (error_code == 0) {
+		ret["result"] = "ok";
+		ret["data"] = data;
+	}
+	else {
+		ret["result"] = "error";
+		ret["error_code"] = error_code;
+		ret["error_description"] = error_description;
+	}
+	pending_events.push_back(ret);
+}
+
+void GameCenter::player_has_conflicting_saved_games(const Array& saved_games) {
+	Dictionary ret;
+	ret["type"] = "conflicting_saved_games";
+	ret["result"] = "ok";
+	ret["saved_games"] = saved_games;
+	pending_events.push_back(ret);
+}
+
+void GameCenter::player_did_modify_saved_game(GameCenterSavedGame *saved_game) {
+	Dictionary ret;
+	ret["type"] = "player_did_modify_saved_game";
+	ret["result"] = "ok";
+	ret["saved_game"] = saved_game;
 	pending_events.push_back(ret);
 }
 
@@ -403,10 +562,12 @@ GameCenter::GameCenter() {
 	authenticated = false;
 
 	gameCenterDelegate = [[GodotGameCenterDelegate alloc] init];
+	[GKLocalPlayer.localPlayer registerListener:gameCenterDelegate];
 };
 
 GameCenter::~GameCenter() {
 	if (gameCenterDelegate) {
+		[GKLocalPlayer.localPlayer unregisterListener:gameCenterDelegate];
 		gameCenterDelegate = nil;
 	}
 }
