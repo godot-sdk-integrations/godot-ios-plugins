@@ -212,6 +212,7 @@ void GameCenter::request_achievement_descriptions() {
 			GodotIntArray maximum_points;
 			Array hidden;
 			Array replayable;
+			GodotFloatArray rarity_percents;
 
 			for (NSUInteger i = 0; i < [descriptions count]; i++) {
 
@@ -234,6 +235,14 @@ void GameCenter::request_achievement_descriptions() {
 				hidden.push_back(description.hidden == YES);
 
 				replayable.push_back(description.replayable == YES);
+
+				NSNumber *number;
+				#ifdef __IPHONE_17_0
+				if (@available(iOS 17.0, *)) {
+					number = description.rarityPercent;
+				}
+				#endif
+				rarity_percents.push_back(number != NULL ? number.doubleValue : -1);
 			}
 
 			ret["names"] = names;
@@ -243,6 +252,7 @@ void GameCenter::request_achievement_descriptions() {
 			ret["maximum_points"] = maximum_points;
 			ret["hidden"] = hidden;
 			ret["replayable"] = replayable;
+			ret["rarity_percents"] = rarity_percents;
 
 		} else {
 			ret["result"] = "error";
