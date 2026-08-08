@@ -1,0 +1,17 @@
+[config]
+name="AlbumIOS"
+binary="albumios.xcframework"
+
+initialization="register_album_ios_types"
+deinitialization="unregister_album_ios_types"
+
+[dependencies]
+linked=[]
+embedded=[]
+system=[]
+
+capabilities=[]
+
+files=[]
+
+[plist]
