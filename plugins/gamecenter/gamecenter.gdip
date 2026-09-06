@@ -8,7 +8,7 @@ deinitialization="unregister_gamecenter_types"
 [dependencies]
 linked=[]
 embedded=[]
-system=["GameKit.framework"]
+system=["GameKit.framework", "StoreKit.framework"]
 
 capabilities=["gamekit"]
 

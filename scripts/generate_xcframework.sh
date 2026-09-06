@@ -1,21 +1,61 @@
 #!/bin/bash
 set -e
 
+PLUGIN=$1
+TARGET=$2
+GODOT_VERSION=$3
+PLATFORM=${4:-ios}
+SCONS_BIN=${SCONS:-scons}
+
 # Compile static libraries
 
-# ARM64 Device
-scons target=$2 arch=arm64 plugin=$1 version=$3
-# x86_64 Simulator
-scons target=$2 arch=x86_64 simulator=yes plugin=$1 version=$3
-# ARM64 Simulator
-scons target=$2 arch=arm64 simulator=yes plugin=$1 version=$3
+if [[ "$PLATFORM" != "ios" && "$PLATFORM" != "tvos" && "$PLATFORM" != "all" ]]; then
+    echo "Usage: $0 <plugin_name> <debug|release|release_debug> <godot_version> [ios|tvos|all]"
+    exit 1
+fi
 
-# Creating a fat libraries for device and simulator
-# lib<plugin>.<arch>-<simulator|ios>.<release|debug|release_debug>.a
-lipo -create "./bin/lib$1.x86_64-simulator.$2.a" "./bin/lib$1.arm64-simulator.$2.a" -output "./bin/lib$1-simulator.$2.a"
+if [[ "$PLATFORM" == "ios" || "$PLATFORM" == "all" ]]; then
+    # ARM64 iOS device.
+    "$SCONS_BIN" target=$TARGET arch=arm64 platform=ios plugin=$PLUGIN version=$GODOT_VERSION
+    # x86_64 iOS simulator.
+    "$SCONS_BIN" target=$TARGET arch=x86_64 simulator=yes platform=ios plugin=$PLUGIN version=$GODOT_VERSION
+    # ARM64 iOS simulator.
+    "$SCONS_BIN" target=$TARGET arch=arm64 simulator=yes platform=ios plugin=$PLUGIN version=$GODOT_VERSION
 
-# Creating a xcframework 
-xcodebuild -create-xcframework \
-    -library "./bin/lib$1.arm64-ios.$2.a" \
-    -library "./bin/lib$1-simulator.$2.a" \
-    -output "./bin/$1.$2.xcframework"
+    # Creating a fat library for iOS simulators.
+    # lib<plugin>.<arch>-<simulator|ios>.<release|debug|release_debug>.a
+    lipo -create "./bin/lib$PLUGIN.x86_64-simulator.$TARGET.a" "./bin/lib$PLUGIN.arm64-simulator.$TARGET.a" -output "./bin/lib$PLUGIN-simulator.$TARGET.a"
+fi
+
+if [[ "$PLATFORM" == "tvos" || "$PLATFORM" == "all" ]]; then
+    # ARM64 tvOS device.
+    "$SCONS_BIN" target=$TARGET arch=arm64 platform=tvos plugin=$PLUGIN version=$GODOT_VERSION
+    # x86_64 tvOS simulator.
+    "$SCONS_BIN" target=$TARGET arch=x86_64 simulator=yes platform=tvos plugin=$PLUGIN version=$GODOT_VERSION
+    # ARM64 tvOS simulator.
+    "$SCONS_BIN" target=$TARGET arch=arm64 simulator=yes platform=tvos plugin=$PLUGIN version=$GODOT_VERSION
+
+    # Creating a fat library for tvOS simulators.
+    # lib<plugin>.<arch>-tvos-simulator.<release|debug|release_debug>.a
+    lipo -create "./bin/lib$PLUGIN.x86_64-tvos-simulator.$TARGET.a" "./bin/lib$PLUGIN.arm64-tvos-simulator.$TARGET.a" -output "./bin/lib$PLUGIN-tvos-simulator.$TARGET.a"
+fi
+
+XCFRAMEWORK_ARGS=()
+OUTPUT_SUFFIX=$PLATFORM
+if [[ "$PLATFORM" == "ios" || "$PLATFORM" == "all" ]]; then
+    XCFRAMEWORK_ARGS+=(-library "./bin/lib$PLUGIN.arm64-ios.$TARGET.a")
+    XCFRAMEWORK_ARGS+=(-library "./bin/lib$PLUGIN-simulator.$TARGET.a")
+fi
+if [[ "$PLATFORM" == "tvos" || "$PLATFORM" == "all" ]]; then
+    XCFRAMEWORK_ARGS+=(-library "./bin/lib$PLUGIN.arm64-tvos.$TARGET.a")
+    XCFRAMEWORK_ARGS+=(-library "./bin/lib$PLUGIN-tvos-simulator.$TARGET.a")
+fi
+
+if [[ "$PLATFORM" == "ios" ]]; then
+    OUTPUT_SUFFIX=""
+else
+    OUTPUT_SUFFIX=".$PLATFORM"
+fi
+
+rm -rf "./bin/$PLUGIN.$TARGET$OUTPUT_SUFFIX.xcframework"
+xcodebuild -create-xcframework "${XCFRAMEWORK_ARGS[@]}" -output "./bin/$PLUGIN.$TARGET$OUTPUT_SUFFIX.xcframework"

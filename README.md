@@ -1,4 +1,4 @@
-# Godot iOS plugins
+# Godot iOS/tvOS plugins
 
 > [!NOTE]
 >
@@ -7,9 +7,10 @@
 [`master` branch](https://github.com/godotengine/godot-ios-plugins/tree/master) is the current development branch and can introduce breaking changes to plugin's public interface.
 [`3.3` branch](https://github.com/godotengine/godot-ios-plugins/tree/3.3)'s aim is to provide same public interface as it was before the switch to new iOS plugin system.
 
-**Note:** iOS plugins are only effective on iOS (either on a physical device or
-in the Xcode simulator). Their singletons will *not* be available when running
-the project from the editor, so you need to export your project to test your changes.
+**Note:** Apple embedded plugins are only effective on exported iOS/tvOS apps
+(either on a physical device or in a supported Xcode simulator). Their
+singletons will *not* be available when running the project from the editor, so
+you need to export your project to test your changes.
 
 ## Instructions
 
@@ -64,24 +65,42 @@ scons platform=iphone target=debug
 - Run the command below to generate an `.a` static library for chosen target:
 
 ```bash
-scons target=<debug|release|release_debug> arch=<arch> simulator=<no|yes> plugin=<plugin_name> version=<3.x|4.0>
+scons target=<debug|release|release_debug> arch=<arch> simulator=<no|yes> platform=<ios|tvos> plugin=<plugin_name> version=<3.x|4.0>
+```
+
+The default `platform` is `ios`, matching the previous behavior. For tvOS
+Game Center builds, use Godot 4.x headers:
+
+```bash
+scons target=release_debug arch=arm64 platform=tvos plugin=gamecenter version=4.0
 ```
 
 **Note:** Godot's official `debug` export templates are compiled with the `release_debug` target, *not* the `debug` target.
 
 #### Building a `.a` library
 
-- Run `./scripts/generate_static_library.sh <plugin_name> <debug|release|release_debug> <godot_version>`
-  to generate `fat` static library with specific configuration.
+- Run the `scons` command above for the platform, architecture, simulator, and
+  plugin you need.
 - The result `.a` binary will be stored in the `bin/` folder.
 
 #### Building a `.xcframework` library
 
 - Run `./scripts/generate_xcframework.sh <plugin_name> <debug|release|release_debug> <godot_version>`
   to generate `xcframework` with specific configuration.
-  `xcframework` allows plugin to support both `arm64` device and `arm64` simulator.
+  `xcframework` allows plugin to support both device and simulator slices.
 - The result `.xcframework` will be stored in the `bin/` folder as well as intermidiate `.a` binaries.
+- Pass a fourth argument to choose the platform:
 
+```bash
+./scripts/generate_xcframework.sh gamecenter release_debug 4.0 ios
+./scripts/generate_xcframework.sh gamecenter release_debug 4.0 tvos
+./scripts/generate_xcframework.sh gamecenter release_debug 4.0 all
+```
+
+The default remains `ios` to preserve the previous build behavior. iOS
+xcframeworks include `ios-arm64` and `ios-arm64_x86_64-simulator`; tvOS
+xcframeworks include `tvos-arm64` and `tvos-arm64_x86_64-simulator`. Passing
+`all` packages all four Apple embedded slices into one xcframework.
 
 ## Adding plugins to a Godot project
 

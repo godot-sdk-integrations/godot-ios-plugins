@@ -6,6 +6,7 @@
 /*                      https://godotengine.org                          */
 /*************************************************************************/
 /* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2025 mime29 (Game Center matchmaking + Godot 4.6 fixes) */
 /* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
@@ -31,10 +32,17 @@
 #include "game_center.h"
 
 #import "game_center_delegate.h"
+#import "game_center_match_delegate.h"
+
+static GodotGameCenterMatchDelegate *matchDelegate = nil;
 
 #if VERSION_MAJOR == 4
 #if VERSION_MINOR >= 6
+#if __has_include("drivers/apple_embedded/godot_app_delegate.h")
 #import "drivers/apple_embedded/godot_app_delegate.h"
+#else
+#import "drivers/apple_embedded/godot_app_delegate_apple_embedded.h"
+#endif
 #import "drivers/apple_embedded/godot_view_controller.h"
 #elif VERSION_MINOR >= 5
 #import "drivers/apple_embedded/godot_app_delegate.h"
@@ -49,6 +57,8 @@
 #endif
 
 #import <GameKit/GameKit.h>
+#import <StoreKit/StoreKit.h>
+#import <TargetConditionals.h>
 
 #if VERSION_MAJOR == 4
 typedef PackedStringArray GodotStringArray;
@@ -63,6 +73,19 @@ typedef PoolRealArray GodotFloatArray;
 GameCenter *GameCenter::instance = NULL;
 GodotGameCenterDelegate *gameCenterDelegate = nil;
 
+static NSString *godot_game_center_player_id(GKPlayer *p_player) {
+	if (!p_player) {
+		return @"";
+	}
+	if (@available(iOS 13.0, tvOS 13.0, *)) {
+		return p_player.gamePlayerID ?: @"";
+	}
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+	return p_player.playerID ?: @"";
+#pragma clang diagnostic pop
+}
+
 void GameCenter::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("authenticate"), &GameCenter::authenticate);
 	ClassDB::bind_method(D_METHOD("is_authenticated"), &GameCenter::is_authenticated);
@@ -74,9 +97,20 @@ void GameCenter::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("request_achievement_descriptions"), &GameCenter::request_achievement_descriptions);
 	ClassDB::bind_method(D_METHOD("show_game_center"), &GameCenter::show_game_center);
 	ClassDB::bind_method(D_METHOD("request_identity_verification_signature"), &GameCenter::request_identity_verification_signature);
+	ClassDB::bind_method(D_METHOD("request_review"), &GameCenter::request_review);
 
 	ClassDB::bind_method(D_METHOD("get_pending_event_count"), &GameCenter::get_pending_event_count);
 	ClassDB::bind_method(D_METHOD("pop_pending_event"), &GameCenter::pop_pending_event);
+
+	// Leaderboard entries.
+	ClassDB::bind_method(D_METHOD("request_leaderboard_entries"), &GameCenter::request_leaderboard_entries);
+
+	// Matchmaking.
+	ClassDB::bind_method(D_METHOD("find_match"), &GameCenter::find_match);
+	ClassDB::bind_method(D_METHOD("send_match_data"), &GameCenter::send_match_data);
+	ClassDB::bind_method(D_METHOD("send_match_data_reliable"), &GameCenter::send_match_data_reliable);
+	ClassDB::bind_method(D_METHOD("disconnect_match"), &GameCenter::disconnect_match);
+	ClassDB::bind_method(D_METHOD("choose_best_host"), &GameCenter::choose_best_host);
 };
 
 Error GameCenter::authenticate() {
@@ -88,7 +122,33 @@ Error GameCenter::authenticate() {
 	GKLocalPlayer *player = [GKLocalPlayer localPlayer];
 	ERR_FAIL_COND_V(![player respondsToSelector:@selector(authenticateHandler)], ERR_UNAVAILABLE);
 
-	UIViewController *root_controller = [[UIApplication sharedApplication] delegate].window.rootViewController;
+	UIViewController *root_controller = nil;
+	if (@available(iOS 13.0, tvOS 13.0, *)) {
+		for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+			if ([scene isKindOfClass:[UIWindowScene class]]) {
+				UIWindowScene *ws = (UIWindowScene *)scene;
+				for (UIWindow *w in ws.windows) {
+					if (w.rootViewController) {
+						root_controller = w.rootViewController;
+						if (w.isKeyWindow) break;
+					}
+				}
+				if (root_controller) break;
+			}
+		}
+	}
+	if (!root_controller) {
+		UIWindow *w = [[UIApplication sharedApplication] delegate].window;
+		if (w) root_controller = w.rootViewController;
+	}
+	if (!root_controller) {
+		for (UIWindow *w in [UIApplication sharedApplication].windows) {
+			if (w.isKeyWindow && w.rootViewController) {
+				root_controller = w.rootViewController;
+				break;
+			}
+		}
+	}
 	ERR_FAIL_COND_V(!root_controller, FAILED);
 
 	// This handler is called several times.  First when the view needs to be shown, then again
@@ -109,15 +169,17 @@ Error GameCenter::authenticate() {
 			if (player.isAuthenticated) {
 				ret["result"] = "ok";
 				ret["alias"] = [player.alias UTF8String];
+				ret["display_name"] = [player.displayName UTF8String];
 				ret["displayName"] = [player.displayName UTF8String];
 
-				if (@available(iOS 13, *)) {
-					ret["player_id"] = [player.teamPlayerID UTF8String];
-				} else {
-					ret["player_id"] = [player.playerID UTF8String];
-				}
+				ret["player_id"] = [godot_game_center_player_id(player) UTF8String];
 
 				GameCenter::get_singleton()->authenticated = true;
+
+				// Present any invite that arrived during cold start.
+				if (matchDelegate) {
+					[matchDelegate presentPendingInviteIfNeeded];
+				}
 			} else {
 				ret["result"] = "error";
 				ret["error_code"] = (int64_t)error.code;
@@ -125,7 +187,7 @@ Error GameCenter::authenticate() {
 				GameCenter::get_singleton()->authenticated = false;
 			};
 
-			pending_events.push_back(ret);
+			GameCenter::get_singleton()->add_pending_event(ret);
 		};
 	});
 
@@ -138,30 +200,45 @@ bool GameCenter::is_authenticated() {
 
 Error GameCenter::post_score(Dictionary p_score) {
 	ERR_FAIL_COND_V(!p_score.has("score") || !p_score.has("category"), ERR_INVALID_PARAMETER);
-	float score = p_score["score"];
+	int64_t score = p_score["score"];
 	String category = p_score["category"];
-
+	int64_t context = 0;
+	if (p_score.has("context")) {
+		context = p_score["context"];
+	}
 	NSString *cat_str = [[NSString alloc] initWithUTF8String:category.utf8().get_data()];
-	GKScore *reporter = [[GKScore alloc] initWithLeaderboardIdentifier:cat_str];
-	reporter.value = score;
 
-	ERR_FAIL_COND_V([GKScore respondsToSelector:@selector(reportScores)], ERR_UNAVAILABLE);
-
-	[GKScore reportScores:@[ reporter ]
-			withCompletionHandler:^(NSError *error) {
-				Dictionary ret;
-				ret["type"] = "post_score";
-				if (error == nil) {
-					ret["result"] = "ok";
-				} else {
-					ret["result"] = "error";
-					ret["error_code"] = (int64_t)error.code;
-					ret["error_description"] = [error.localizedDescription UTF8String];
-				};
-
-				pending_events.push_back(ret);
-			}];
-
+	if (@available(iOS 14.0, tvOS 14.0, *)) {
+		[GKLeaderboard submitScore:score
+		                   context:(NSUInteger)context
+		                    player:[GKLocalPlayer localPlayer]
+		      leaderboardIDs:@[cat_str]
+		     completionHandler:^(NSError *error) {
+			Dictionary ret;
+			ret["type"] = "post_score";
+			ret["result"] = error == nil ? "ok" : "error";
+			if (error) {
+				ret["error_code"] = (int64_t)error.code;
+				ret["error_description"] = [error.localizedDescription UTF8String];
+			}
+			GameCenter::get_singleton()->add_pending_event(ret);
+		}];
+	} else {
+		GKScore *reporter = [[GKScore alloc] initWithLeaderboardIdentifier:cat_str];
+		reporter.value = score;
+		reporter.context = (uint64_t)context;
+		[GKScore reportScores:@[ reporter ]
+				withCompletionHandler:^(NSError *error) {
+					Dictionary ret;
+					ret["type"] = "post_score";
+					ret["result"] = error == nil ? "ok" : "error";
+					if (error) {
+						ret["error_code"] = (int64_t)error.code;
+						ret["error_description"] = [error.localizedDescription UTF8String];
+					}
+					GameCenter::get_singleton()->add_pending_event(ret);
+				}];
+	}
 	return OK;
 };
 
@@ -193,7 +270,7 @@ Error GameCenter::award_achievement(Dictionary p_params) {
 						ret["error_code"] = (int64_t)error.code;
 					};
 
-					pending_events.push_back(ret);
+					GameCenter::get_singleton()->add_pending_event(ret);
 				}];
 
 	return OK;
@@ -249,7 +326,7 @@ void GameCenter::request_achievement_descriptions() {
 			ret["error_code"] = (int64_t)error.code;
 		};
 
-		pending_events.push_back(ret);
+		GameCenter::get_singleton()->add_pending_event(ret);
 	}];
 };
 
@@ -279,7 +356,7 @@ void GameCenter::request_achievements() {
 			ret["error_code"] = (int64_t)error.code;
 		};
 
-		pending_events.push_back(ret);
+		GameCenter::get_singleton()->add_pending_event(ret);
 	}];
 };
 
@@ -294,7 +371,7 @@ void GameCenter::reset_achievements() {
 			ret["error_code"] = (int64_t)error.code;
 		};
 
-		pending_events.push_back(ret);
+		GameCenter::get_singleton()->add_pending_event(ret);
 	}];
 };
 
@@ -320,7 +397,33 @@ Error GameCenter::show_game_center(Dictionary p_params) {
 	GKGameCenterViewController *controller = [[GKGameCenterViewController alloc] init];
 	ERR_FAIL_COND_V(!controller, FAILED);
 
-	UIViewController *root_controller = [[UIApplication sharedApplication] delegate].window.rootViewController;
+	UIViewController *root_controller = nil;
+	if (@available(iOS 13.0, tvOS 13.0, *)) {
+		for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+			if ([scene isKindOfClass:[UIWindowScene class]]) {
+				UIWindowScene *ws = (UIWindowScene *)scene;
+				for (UIWindow *w in ws.windows) {
+					if (w.rootViewController) {
+						root_controller = w.rootViewController;
+						if (w.isKeyWindow) break;
+					}
+				}
+				if (root_controller) break;
+			}
+		}
+	}
+	if (!root_controller) {
+		UIWindow *w = [[UIApplication sharedApplication] delegate].window;
+		if (w) root_controller = w.rootViewController;
+	}
+	if (!root_controller) {
+		for (UIWindow *w in [UIApplication sharedApplication].windows) {
+			if (w.isKeyWindow && w.rootViewController) {
+				root_controller = w.rootViewController;
+				break;
+			}
+		}
+	}
 	ERR_FAIL_COND_V(!root_controller, FAILED);
 
 	controller.gameCenterDelegate = gameCenterDelegate;
@@ -352,21 +455,17 @@ Error GameCenter::request_identity_verification_signature() {
 			ret["signature"] = [[signature base64EncodedStringWithOptions:0] UTF8String];
 			ret["salt"] = [[salt base64EncodedStringWithOptions:0] UTF8String];
 			ret["timestamp"] = timestamp;
-			if (@available(iOS 13.5, *)) {
-				ret["player_id"] = [player.teamPlayerID UTF8String];
-			} else {
-				ret["player_id"] = [player.playerID UTF8String];
-			}
+			ret["player_id"] = [godot_game_center_player_id(player) UTF8String];
 		} else {
 			ret["result"] = "error";
 			ret["error_code"] = (int64_t)error.code;
 			ret["error_description"] = [error.localizedDescription UTF8String];
 		};
 
-		pending_events.push_back(ret);
+		GameCenter::get_singleton()->add_pending_event(ret);
 	};
 
-	if (@available(iOS 13.5, *)) {
+	if (@available(iOS 13.5, tvOS 13.5, *)) {
 		[player fetchItemsForIdentityVerificationSignature:verificationSignatureHandler];
 	} else {
 		[player generateIdentityVerificationSignatureWithCompletionHandler:verificationSignatureHandler];
@@ -375,11 +474,29 @@ Error GameCenter::request_identity_verification_signature() {
 	return OK;
 };
 
+Error GameCenter::request_review() {
+#if TARGET_OS_TV
+	return ERR_UNAVAILABLE;
+#else
+	if ((NSClassFromString(@"SKStoreReviewController")) == nil) {
+		return ERR_UNAVAILABLE;
+	}
+
+	dispatch_async(dispatch_get_main_queue(), ^{
+		if (@available(iOS 10.3, *)) {
+			[SKStoreReviewController requestReview];
+		}
+	});
+
+	return OK;
+#endif
+};
+
 void GameCenter::game_center_closed() {
 	Dictionary ret;
 	ret["type"] = "show_game_center";
 	ret["result"] = "ok";
-	pending_events.push_back(ret);
+	add_pending_event(ret);
 }
 
 int GameCenter::get_pending_event_count() {
@@ -397,12 +514,199 @@ GameCenter *GameCenter::get_singleton() {
 	return instance;
 };
 
+Error GameCenter::request_leaderboard_entries(Dictionary p_params) {
+	ERR_FAIL_COND_V(!p_params.has("leaderboard_id"), ERR_INVALID_PARAMETER);
+	ERR_FAIL_COND_V(!is_authenticated(), ERR_UNAUTHORIZED);
+
+	String leaderboard_id = p_params["leaderboard_id"];
+	int count = p_params.has("count") ? (int)p_params["count"] : 10;
+	// scope: 0 = global, 1 = friends
+	int scope = p_params.has("scope") ? (int)p_params["scope"] : 0;
+
+	NSString *lid = [[NSString alloc] initWithUTF8String:leaderboard_id.utf8().get_data()];
+
+	if (@available(iOS 14.0, tvOS 14.0, *)) {
+		[GKLeaderboard loadLeaderboardsWithIDs:@[lid]
+			completionHandler:^(NSArray<GKLeaderboard *> *leaderboards, NSError *error) {
+			if (error || leaderboards.count == 0) {
+				Dictionary ret;
+				ret["type"] = "leaderboard_entries";
+				ret["result"] = "error";
+				if (error) {
+					ret["error_code"] = (int64_t)error.code;
+					ret["error_description"] = [error.localizedDescription UTF8String];
+				} else {
+					ret["error_description"] = "Leaderboard not found";
+				}
+				GameCenter::get_singleton()->add_pending_event(ret);
+				return;
+			}
+
+			GKLeaderboard *lb = leaderboards[0];
+			GKLeaderboardPlayerScope playerScope = (scope == 1)
+				? GKLeaderboardPlayerScopeFriendsOnly
+				: GKLeaderboardPlayerScopeGlobal;
+
+			[lb loadEntriesForPlayerScope:playerScope
+				timeScope:GKLeaderboardTimeScopeAllTime
+				range:NSMakeRange(1, count)
+				completionHandler:^(GKLeaderboardEntry *localEntry,
+					NSArray<GKLeaderboardEntry *> *entries,
+					NSInteger totalCount, NSError *loadError) {
+
+				Dictionary ret;
+				ret["type"] = "leaderboard_entries";
+				if (loadError) {
+					ret["result"] = "error";
+					ret["error_code"] = (int64_t)loadError.code;
+					ret["error_description"] = [loadError.localizedDescription UTF8String];
+				} else {
+					ret["result"] = "ok";
+					ret["total_count"] = (int64_t)totalCount;
+
+					Array entry_list;
+					for (GKLeaderboardEntry *e in entries) {
+						Dictionary ed;
+						ed["rank"] = (int64_t)e.rank;
+						ed["score"] = (int64_t)e.score;
+						ed["context"] = (int64_t)e.context;
+						ed["display_name"] = [e.player.displayName UTF8String];
+						ed["alias"] = [e.player.alias UTF8String];
+						ed["player_id"] = [godot_game_center_player_id(e.player) UTF8String];
+						entry_list.push_back(ed);
+					}
+					ret["entries"] = entry_list;
+
+					// Local player entry (may be outside the requested range).
+					if (localEntry) {
+						Dictionary le;
+						le["rank"] = (int64_t)localEntry.rank;
+						le["score"] = (int64_t)localEntry.score;
+						le["context"] = (int64_t)localEntry.context;
+						le["display_name"] = [localEntry.player.displayName UTF8String];
+						le["alias"] = [localEntry.player.alias UTF8String];
+						le["player_id"] = [godot_game_center_player_id(localEntry.player) UTF8String];
+						ret["local_entry"] = le;
+					}
+				}
+				GameCenter::get_singleton()->add_pending_event(ret);
+			}];
+		}];
+	} else {
+		// iOS < 14 fallback — not supported.
+		Dictionary ret;
+		ret["type"] = "leaderboard_entries";
+		ret["result"] = "error";
+		ret["error_description"] = "loadEntries requires iOS/tvOS 14+";
+		add_pending_event(ret);
+	}
+
+	return OK;
+}
+
+void GameCenter::add_pending_event(const Dictionary &p_event) {
+	// Many GameKit callbacks fire on background threads (Swift concurrency,
+	// GCD completion handlers). Godot's data structures are NOT thread-safe,
+	// so always dispatch to main thread before touching pending_events.
+	if ([NSThread isMainThread]) {
+		pending_events.push_back(p_event);
+	} else {
+		// Copy the dictionary so it survives the async dispatch.
+		Dictionary copy = p_event;
+		dispatch_async(dispatch_get_main_queue(), ^{
+			pending_events.push_back(copy);
+		});
+	}
+}
+
+Error GameCenter::find_match(Dictionary p_params) {
+	ERR_FAIL_COND_V(!is_authenticated(), ERR_UNAUTHORIZED);
+	int min_players = p_params.has("min_players") ? (int)p_params["min_players"] : 2;
+	int max_players = p_params.has("max_players") ? (int)p_params["max_players"] : 2;
+	int player_group = p_params.has("player_group") ? (int)p_params["player_group"] : 0;
+
+	GKMatchRequest *request = [[GKMatchRequest alloc] init];
+	request.minPlayers = min_players;
+	request.maxPlayers = max_players;
+	if (player_group > 0) request.playerGroup = player_group;
+
+	GKMatchmakerViewController *mmvc = [[GKMatchmakerViewController alloc] initWithMatchRequest:request];
+	ERR_FAIL_COND_V(!mmvc, FAILED);
+	if (!matchDelegate) matchDelegate = [[GodotGameCenterMatchDelegate alloc] init];
+	mmvc.matchmakerDelegate = matchDelegate;
+
+	UIViewController *root_controller = nil;
+	if (@available(iOS 13.0, tvOS 13.0, *)) {
+		for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+			if ([scene isKindOfClass:[UIWindowScene class]]) {
+				UIWindowScene *ws = (UIWindowScene *)scene;
+				for (UIWindow *w in ws.windows) {
+					if (w.rootViewController) { root_controller = w.rootViewController; if (w.isKeyWindow) break; }
+				}
+				if (root_controller) break;
+			}
+		}
+	}
+	if (!root_controller) root_controller = [[UIApplication sharedApplication] delegate].window.rootViewController;
+	ERR_FAIL_COND_V(!root_controller, FAILED);
+	[root_controller presentViewController:mmvc animated:YES completion:nil];
+	return OK;
+}
+
+Error GameCenter::send_match_data(String p_data) {
+	ERR_FAIL_COND_V(!matchDelegate || !matchDelegate.currentMatch, ERR_UNCONFIGURED);
+	NSData *data = [[NSString stringWithUTF8String:p_data.utf8().get_data()] dataUsingEncoding:NSUTF8StringEncoding];
+	NSError *error = nil;
+	[matchDelegate.currentMatch sendDataToAllPlayers:data withDataMode:GKMatchSendDataUnreliable error:&error];
+	return error ? FAILED : OK;
+}
+
+Error GameCenter::send_match_data_reliable(String p_data) {
+	ERR_FAIL_COND_V(!matchDelegate || !matchDelegate.currentMatch, ERR_UNCONFIGURED);
+	NSData *data = [[NSString stringWithUTF8String:p_data.utf8().get_data()] dataUsingEncoding:NSUTF8StringEncoding];
+	NSError *error = nil;
+	[matchDelegate.currentMatch sendDataToAllPlayers:data withDataMode:GKMatchSendDataReliable error:&error];
+	return error ? FAILED : OK;
+}
+
+void GameCenter::disconnect_match() {
+	if (matchDelegate && matchDelegate.currentMatch) {
+		[matchDelegate.currentMatch disconnect];
+		matchDelegate.currentMatch = nil;
+	}
+}
+
+void GameCenter::choose_best_host() {
+	ERR_FAIL_COND(!matchDelegate || !matchDelegate.currentMatch);
+	[matchDelegate.currentMatch chooseBestHostingPlayerWithCompletionHandler:^(GKPlayer *bestHost) {
+		Dictionary ret;
+		ret["type"] = "best_host";
+		if (bestHost) {
+			ret["display_name"] = [bestHost.displayName UTF8String];
+			ret["player_id"] = [godot_game_center_player_id(bestHost) UTF8String];
+			ret["is_local"] = [bestHost isEqual:[GKLocalPlayer localPlayer]] ? true : false;
+		} else {
+			ret["player_id"] = "";
+			ret["is_local"] = true;
+		}
+		GameCenter::get_singleton()->add_pending_event(ret);
+	}];
+}
+
 GameCenter::GameCenter() {
 	ERR_FAIL_COND(instance != NULL);
 	instance = this;
 	authenticated = false;
 
 	gameCenterDelegate = [[GodotGameCenterDelegate alloc] init];
+
+	// Create and register the match delegate early so it can receive
+	// invitations that arrive during cold start (before auth completes).
+	// The invite handler stores the invite if auth isn't ready yet.
+	if (!matchDelegate) {
+		matchDelegate = [[GodotGameCenterMatchDelegate alloc] init];
+	}
+	[GKLocalPlayer.localPlayer registerListener:matchDelegate];
 };
 
 GameCenter::~GameCenter() {

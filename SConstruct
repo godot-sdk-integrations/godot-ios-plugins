@@ -21,6 +21,7 @@ env = DefaultEnvironment()
 # Define our options
 opts.Add(EnumVariable('target', "Compilation target", 'debug', ['debug', 'release', "release_debug"]))
 opts.Add(EnumVariable('arch', "Compilation Architecture", '', ['', 'arm64', 'x86_64']))
+opts.Add(EnumVariable('platform', "Apple embedded platform", 'ios', ['ios', 'tvos']))
 opts.Add(BoolVariable('simulator', "Compilation platform", 'no'))
 opts.Add(BoolVariable('use_llvm', "Use the LLVM / Clang compiler", 'no'))
 opts.Add(PathVariable('target_path', 'The path where the lib is installed.', 'bin/'))
@@ -58,14 +59,28 @@ if env['version'] == '':
 # Enable Obj-C modules
 env.Append(CCFLAGS=["-fmodules", "-fcxx-modules"])
 
-if env['simulator']:
-    sdk_name = 'iphonesimulator'
-    env.Append(CCFLAGS=['-mios-simulator-version-min=12.0'])
-    env.Append(LINKFLAGS=["-mios-simulator-version-min=12.0"])
+if env['platform'] == 'tvos' and env['version'] == '3.x':
+    print("tvOS plugin builds require Godot 4.x headers.")
+    quit();
+
+if env['platform'] == 'tvos':
+    if env['simulator']:
+        sdk_name = 'appletvsimulator'
+        env.Append(CCFLAGS=['-mtvos-simulator-version-min=13.0'])
+        env.Append(LINKFLAGS=["-mtvos-simulator-version-min=13.0"])
+    else:
+        sdk_name = 'appletvos'
+        env.Append(CCFLAGS=['-mtvos-version-min=13.0'])
+        env.Append(LINKFLAGS=["-mtvos-version-min=13.0"])
 else:
-    sdk_name = 'iphoneos'
-    env.Append(CCFLAGS=['-miphoneos-version-min=12.0'])
-    env.Append(LINKFLAGS=["-miphoneos-version-min=12.0"])
+    if env['simulator']:
+        sdk_name = 'iphonesimulator'
+        env.Append(CCFLAGS=['-mios-simulator-version-min=12.0'])
+        env.Append(LINKFLAGS=["-mios-simulator-version-min=12.0"])
+    else:
+        sdk_name = 'iphoneos'
+        env.Append(CCFLAGS=['-miphoneos-version-min=12.0'])
+        env.Append(LINKFLAGS=["-miphoneos-version-min=12.0"])
 
 try:
     sdk_path = decode_utf8(subprocess.check_output(['xcrun', '--sdk', sdk_name, '--show-sdk-path']).strip())
@@ -84,9 +99,10 @@ env.Append(CCFLAGS=[
 
 env.Append(CCFLAGS=['-arch', env['arch'], "-isysroot", "$IOS_SDK_PATH", "-stdlib=libc++", '-isysroot', sdk_path])
 env.Append(CCFLAGS=['-DPTRCALL_ENABLED'])
+apple_platform_define = '-DTVOS_ENABLED' if env['platform'] == 'tvos' else '-DIOS_ENABLED'
 env.Prepend(CXXFLAGS=[
-    '-DNEED_LONG_INT', '-DLIBYUV_DISABLE_NEON', 
-    '-DIOS_ENABLED', '-DUNIX_ENABLED', '-DCOREAUDIO_ENABLED'
+    '-DNEED_LONG_INT', '-DLIBYUV_DISABLE_NEON',
+    apple_platform_define, '-DUNIX_ENABLED', '-DCOREAUDIO_ENABLED'
 ])
 env.Append(LINKFLAGS=["-arch", env['arch'], '-isysroot', sdk_path, '-F' + sdk_path])
 
@@ -148,18 +164,20 @@ if env['version'] == '4.0' and env['plugin'] == 'arkit':
     print("'arkit' plugin is 3.x only.")
     quit();
 
+godot_source_dir = os.environ.get("GODOT_SOURCE_DIR", "godot")
+
 # Adding header files
 if env['version'] == '3.x':
     env.Append(CPPPATH=[
         '.', 
-        'godot', 
-        'godot/platform/iphone',
+        godot_source_dir,
+        godot_source_dir + '/platform/iphone',
     ])
 else:
        env.Append(CPPPATH=[
         '.', 
-        'godot', 
-        'godot/platform/ios',
+        godot_source_dir,
+        godot_source_dir + '/platform/ios',
     ])
 
 # tweak this if you want to use different folders, or more folders, to store your source code in.
@@ -167,8 +185,11 @@ sources = Glob('plugins/' + env['plugin'] + '/*.cpp')
 sources.append(Glob('plugins/' + env['plugin'] + '/*.mm'))
 sources.append(Glob('plugins/' + env['plugin'] + '/*.m'))
 
-# lib<plugin>.<arch>-<simulator|ios>.<release|debug|release_debug>.a
-library_platform = env["arch"] + "-" + ("simulator" if env["simulator"] else "ios")
+# lib<plugin>.<arch>-<simulator|ios|tvos|tvos-simulator>.<release|debug|release_debug>.a
+if env["platform"] == "tvos":
+    library_platform = env["arch"] + "-" + ("tvos-simulator" if env["simulator"] else "tvos")
+else:
+    library_platform = env["arch"] + "-" + ("simulator" if env["simulator"] else "ios")
 library_name = env['plugin'] + "." + library_platform + "." + env["target"] + ".a"
 library = env.StaticLibrary(target=env['target_path'] + library_name, source=sources)
 

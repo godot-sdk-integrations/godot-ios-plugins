@@ -6,6 +6,7 @@
 /*                      https://godotengine.org                          */
 /*************************************************************************/
 /* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2025 mime29 (Game Center matchmaking + Godot 4.6 fixes) */
 /* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
@@ -63,8 +64,22 @@ public:
 	void request_achievement_descriptions();
 	Error show_game_center(Dictionary p_params);
 	Error request_identity_verification_signature();
+	Error request_review();
 
 	void game_center_closed();
+
+	// Leaderboard entries (modern GKLeaderboard.loadEntries API).
+	Error request_leaderboard_entries(Dictionary p_params);
+
+	// Real-time matchmaking (GKMatch / GKMatchmakerViewController).
+	Error find_match(Dictionary p_params);
+	Error send_match_data(String p_data);
+	Error send_match_data_reliable(String p_data);
+	void disconnect_match();
+	void choose_best_host();
+
+	// Public so delegates can push events.
+	void add_pending_event(const Dictionary &p_event);
 
 	int get_pending_event_count();
 	Variant pop_pending_event();

@@ -35,11 +35,17 @@
 @implementation GodotGameCenterDelegate
 
 - (void)gameCenterViewControllerDidFinish:(GKGameCenterViewController *)gameCenterViewController {
-	//[gameCenterViewController dismissViewControllerAnimated:YES completion:^{GameCenter::get_singleton()->game_center_closed();}];//version for signaling when overlay is completely gone
-	if (GameCenter::get_singleton()) {
-		GameCenter::get_singleton()->game_center_closed();
-	}
-	[gameCenterViewController dismissViewControllerAnimated:YES completion:nil];
+	// Dismiss first, then notify Godot on the MAIN thread.
+	// On iOS 15+ with Swift concurrency, this delegate can be called from a
+	// background thread. Accessing Godot's pending_events from a non-main
+	// thread causes "unsafeForcedSync called from Swift Concurrent context" crash.
+	[gameCenterViewController dismissViewControllerAnimated:YES completion:^{
+		dispatch_async(dispatch_get_main_queue(), ^{
+			if (GameCenter::get_singleton()) {
+				GameCenter::get_singleton()->game_center_closed();
+			}
+		});
+	}];
 }
 
 @end
